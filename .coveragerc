@@ -1,0 +1,25 @@
+[run]
+branch = True
+
+source =
+    nrt_logging/
+
+omit =
+    venv/*
+    tests/*
+    */__init__.py
+    */tests_execution.py
+    nrt_logging/test/tests_suite.py
+
+[report]
+exclude_lines =
+    if __name__ == .__main__.:
+    def _debug
+    def __debug
+
+[html]
+directory = coverage_report/html
+
+[json]
+output = coverage_report/report.json
+pretty_print = true

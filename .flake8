@@ -1,0 +1,16 @@
+[flake8]
+
+ignore = W605
+
+exclude =
+    .git,
+    __pycache__,
+    docs/source/conf.py,
+    old,
+    build,
+    dist,
+    .flask8,
+    venv
+max-complexity = 10
+
+filename = *.py
