@@ -3,9 +3,11 @@ import yaml
 
 from nrt_logging.log_format import LogFormat
 from nrt_logging.log_level import LogLevelEnum
-from nrt_logging.logger import logger_manager, NrtLogger
-from nrt_logging.logger_stream_handlers import ConsoleStreamHandler, LogStyleEnum, ManualDepthEnum
-from tests.test_nrt_logging.test_base import NAME_1, stdout_redirect, r_stdout, is_date_in_format
+from nrt_logging.logger import logger_manager
+from nrt_logging.logger_stream_handlers import \
+    ConsoleStreamHandler, LogStyleEnum, ManualDepthEnum
+from tests.test_nrt_logging.test_base import \
+    NAME_1, stdout_redirect, r_stdout, is_date_in_format
 
 TEST_FILE_NAME = 'logger_line_style_test.py'
 
@@ -37,7 +39,7 @@ class NrtLoggerManagerTests(unittest.TestCase):
             LogLevelEnum.INFO,
             f'{TEST_FILE_NAME}.{self.__class__.__name__}',
             'test_logger_line',
-            26,
+            28,
             msg)
 
     @stdout_redirect
@@ -76,7 +78,7 @@ class NrtLoggerManagerTests(unittest.TestCase):
             LogLevelEnum.WARN,
             expected_path,
             expected_method_name,
-            51,
+            53,
             msg)
 
         children = log_dict.get('children')
@@ -89,7 +91,7 @@ class NrtLoggerManagerTests(unittest.TestCase):
             LogLevelEnum.ERROR,
             expected_path,
             expected_method_name,
-            54,
+            56,
             child_msg_1)
 
         self.__verify_log_line(
@@ -98,7 +100,7 @@ class NrtLoggerManagerTests(unittest.TestCase):
             LogLevelEnum.CRITICAL,
             expected_path,
             expected_method_name,
-            57,
+            59,
             child_msg_2)
 
         children_2 = children[1].get('children')
@@ -111,7 +113,7 @@ class NrtLoggerManagerTests(unittest.TestCase):
             LogLevelEnum.WARN,
             expected_path,
             expected_method_name,
-            60,
+            62,
             child_msg_3)
 
         self.__verify_log_line(
@@ -120,7 +122,7 @@ class NrtLoggerManagerTests(unittest.TestCase):
             LogLevelEnum.INFO,
             expected_path,
             expected_method_name,
-            62,
+            64,
             child_msg_2)
 
     def __verify_log_line(

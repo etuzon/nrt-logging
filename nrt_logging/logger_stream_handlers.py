@@ -49,7 +49,7 @@ class LoggerStreamHandlerBase(ABC):
     _stream: IO = None
 
     _lock: Lock
-
+    _stack_log_start_index: int = 4
     _log_style: LogStyleEnum = DEFAULT_LOG_STYLE
     _depth: int
     _depth_list: list[DepthData]
@@ -163,14 +163,6 @@ class LoggerStreamHandlerBase(ABC):
         self._log_format = log_format
 
     @property
-    def stream(self) -> IO:
-        return self._stream
-
-    @stream.setter
-    def stream(self, stream: IO):
-        self._stream = stream
-
-    @property
     def log_line_template(self) -> str:
         return self._log_line_template
 
@@ -185,7 +177,8 @@ class LoggerStreamHandlerBase(ABC):
             manual_depth: ManualDepthEnum = ManualDepthEnum.NO_CHANGE):
 
         if log_level >= self.log_level:
-            stack_list = self.__get_stack_list(start_index=4)
+            stack_list = \
+                self.__get_stack_list(start_index=self._stack_log_start_index)
 
             manual_depth = \
                 self.__update_manual_depth(stack_list[0], manual_depth)
@@ -229,7 +222,6 @@ class LoggerStreamHandlerBase(ABC):
             return self.__create_line_element_str(msg, log_level)
         else:
             raise Exception('Bug: Unimplemented code')
-
 
     def __create_log_str_on_depth_plus(
             self,
@@ -353,7 +345,7 @@ class LoggerStreamHandlerBase(ABC):
 
     def __write(self, s: str):
         self._lock.acquire()
-        self.stream.write(s)
+        self._stream.write(s)
         self._lock.release()
 
     def __get_stack_list(self, start_index: int = 3) -> list[str]:
@@ -436,7 +428,8 @@ class LoggerStreamHandlerBase(ABC):
             return f'\n{self.__create_yaml_path_element(path, depth_spaces)}'
 
         if yaml_element == LogElementEnum.METHOD:
-            return f'\n{self.__create_yaml_method_element(method, depth_spaces)}'
+            return \
+                f'\n{self.__create_yaml_method_element(method, depth_spaces)}'
 
         if yaml_element == LogElementEnum.LINE_NUMBER:
             return \
@@ -445,7 +438,8 @@ class LoggerStreamHandlerBase(ABC):
 
         if yaml_element == LogElementEnum.MESSAGE:
             return \
-                f'\n{self.__create_yaml_line_message_element(msg, depth_spaces)}'
+                '\n' \
+                f'{self.__create_yaml_line_message_element(msg, depth_spaces)}'
 
         raise Exception(f'Bug: Yaml element {yaml_element} not implemented')
 
@@ -579,7 +573,8 @@ class LoggerStreamHandlerBase(ABC):
         return f'{depth_spaces}{LogElementEnum.PATH.value}: {path}'
 
     @classmethod
-    def __create_yaml_method_element(cls, method: str, depth_spaces: str) -> str:
+    def __create_yaml_method_element(
+            cls, method: str, depth_spaces: str) -> str:
         return f'{depth_spaces}{LogElementEnum.METHOD.value}: {method}'
 
     @classmethod
@@ -630,7 +625,8 @@ class ConsoleStreamHandler(LoggerStreamHandlerBase):
 
     def __init__(self):
         super().__init__()
-        self.stream = sys.stdout
+        self._stream = sys.stdout
+        self._stack_log_start_index = 4
 
     def critical(
             self,
@@ -670,3 +666,63 @@ class ConsoleStreamHandler(LoggerStreamHandlerBase):
 
     def close(self):
         pass
+
+
+class FileStreamHandler(LoggerStreamHandlerBase):
+
+    __file_path: str
+
+    def __init__(self, file_path: str):
+        super().__init__()
+        self.__file_path = file_path
+        self._stack_log_start_index = 5
+
+    def critical(
+            self,
+            msg: str,
+            manual_depth: ManualDepthEnum = ManualDepthEnum.NO_CHANGE):
+        self._log(LogLevelEnum.CRITICAL, msg, manual_depth)
+
+    def error(
+            self,
+            msg: str,
+            manual_depth: ManualDepthEnum = ManualDepthEnum.NO_CHANGE):
+        self._log(LogLevelEnum.ERROR, msg, manual_depth)
+
+    def warn(
+            self,
+            msg: str,
+            manual_depth: ManualDepthEnum = ManualDepthEnum.NO_CHANGE):
+        self._log(LogLevelEnum.WARN, msg, manual_depth)
+
+    def info(
+            self,
+            msg: str,
+            manual_depth: ManualDepthEnum = ManualDepthEnum.NO_CHANGE):
+        self._log(LogLevelEnum.INFO, msg, manual_depth)
+
+    def debug(
+            self,
+            msg: str,
+            manual_depth: ManualDepthEnum = ManualDepthEnum.NO_CHANGE):
+        self._log(LogLevelEnum.DEBUG, msg, manual_depth)
+
+    def trace(
+            self,
+            msg: str,
+            manual_depth: ManualDepthEnum = ManualDepthEnum.NO_CHANGE):
+        self._log(LogLevelEnum.TRACE, msg, manual_depth)
+
+    def close(self):
+        if self._stream is not None:
+            self._stream.close()
+
+    def _log(
+            self,
+            log_level: LogLevelEnum,
+            msg: str,
+            manual_depth: ManualDepthEnum = ManualDepthEnum.NO_CHANGE):
+
+        self._stream = open(self.__file_path, 'a')
+        super()._log(log_level, msg, manual_depth)
+        self.close()

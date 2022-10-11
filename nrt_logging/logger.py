@@ -24,6 +24,8 @@ class NrtLogger:
             self,
             msg: str,
             manual_depth: ManualDepthEnum = ManualDepthEnum.NO_CHANGE):
+        self.__verify_stream_handler_list_not_empty()
+
         for handler in self.__stream_handler_list:
             handler.critical(msg, manual_depth)
 
@@ -31,6 +33,8 @@ class NrtLogger:
             self,
             msg: str,
             manual_depth: ManualDepthEnum = ManualDepthEnum.NO_CHANGE):
+        self.__verify_stream_handler_list_not_empty()
+
         for handler in self.__stream_handler_list:
             handler.error(msg, manual_depth)
 
@@ -38,6 +42,8 @@ class NrtLogger:
             self,
             msg: str,
             manual_depth: ManualDepthEnum = ManualDepthEnum.NO_CHANGE):
+        self.__verify_stream_handler_list_not_empty()
+
         for handler in self.__stream_handler_list:
             handler.warn(msg, manual_depth)
 
@@ -45,6 +51,8 @@ class NrtLogger:
             self,
             msg: str,
             manual_depth: ManualDepthEnum = ManualDepthEnum.NO_CHANGE):
+        self.__verify_stream_handler_list_not_empty()
+
         for handler in self.__stream_handler_list:
             handler.info(msg, manual_depth)
 
@@ -52,6 +60,8 @@ class NrtLogger:
             self,
             msg: str,
             manual_depth: ManualDepthEnum = ManualDepthEnum.NO_CHANGE):
+        self.__verify_stream_handler_list_not_empty()
+
         for handler in self.__stream_handler_list:
             handler.debug(msg, manual_depth)
 
@@ -59,6 +69,8 @@ class NrtLogger:
             self,
             msg: str,
             manual_depth: ManualDepthEnum = ManualDepthEnum.NO_CHANGE):
+        self.__verify_stream_handler_list_not_empty()
+
         for handler in self.__stream_handler_list:
             handler.trace(msg, manual_depth)
 
@@ -78,6 +90,12 @@ class NrtLogger:
             handler.close()
 
         self.__stream_handler_list = []
+
+    def __verify_stream_handler_list_not_empty(self):
+        if not self.__stream_handler_list:
+            raise Exception(
+                'Unable write to logs'
+                ' if no stream handler attached to logger')
 
 
 class NrtLoggerManager:
