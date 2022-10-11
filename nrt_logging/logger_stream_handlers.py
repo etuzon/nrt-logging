@@ -31,12 +31,17 @@ class DepthData:
 
 
 class LoggerStreamHandlerBase(ABC):
-    DEFAULT_LOG_STYLE = LogStyleEnum.YAML
+    DEFAULT_LOG_STYLE = LogStyleEnum.LINE
     DEFAULT_LOG_LEVEL = LogLevelEnum.INFO
 
     YAML_SPACES_SEPARATOR = ' ' * 2
     YAML_CHILDREN_SPACES_SEPARATOR = ' ' * 4
     YAML_DOCUMENT_SEPARATOR = '---'
+
+    LOG_LINE_DEFAULT_TEMPLATE = \
+        f'{LogElementEnum.DATE.value} [{LogElementEnum.LOG_LEVEL.value}]'\
+        f' [{LogElementEnum.PATH.value}.{LogElementEnum.METHOD.value}'\
+        f':{LogElementEnum.LINE_NUMBER.value}] {LogElementEnum.MESSAGE.value}'
 
     _log_level: LogLevelEnum = None
     _log_format: LogFormat = None
@@ -45,11 +50,13 @@ class LoggerStreamHandlerBase(ABC):
 
     _lock: Lock
 
-    __log_style: LogStyleEnum = DEFAULT_LOG_STYLE
+    _log_style: LogStyleEnum = DEFAULT_LOG_STYLE
     _depth: int
     _depth_list: list[DepthData]
     _increase_depth_list: list[str]
     _decrease_depth_list: list[str]
+
+    _log_line_template: str = LOG_LINE_DEFAULT_TEMPLATE
 
     def __init__(self):
         if self._log_level is None:
@@ -133,11 +140,11 @@ class LoggerStreamHandlerBase(ABC):
 
     @property
     def log_style(self) -> LogStyleEnum:
-        return self.__log_style
+        return self._log_style
 
     @log_style.setter
     def log_style(self, log_style: LogStyleEnum):
-        self.__log_style = log_style
+        self._log_style = log_style
 
     @property
     def log_level(self) -> LogLevelEnum:
@@ -162,6 +169,14 @@ class LoggerStreamHandlerBase(ABC):
     @stream.setter
     def stream(self, stream: IO):
         self._stream = stream
+
+    @property
+    def log_line_template(self) -> str:
+        return self._log_line_template
+
+    @log_line_template.setter
+    def log_line_template(self, log_line_template: str):
+        self._log_line_template = log_line_template
 
     def _log(
             self,
@@ -210,9 +225,11 @@ class LoggerStreamHandlerBase(ABC):
                 '\n' \
                 + self.YAML_DOCUMENT_SEPARATOR \
                 + self.__create_yaml_elements_str(msg, log_level)
+        elif self.log_style == LogStyleEnum.LINE:
+            return self.__create_line_element_str(msg, log_level)
         else:
-            # TODO:
-            return ''
+            raise Exception('Bug: Unimplemented code')
+
 
     def __create_log_str_on_depth_plus(
             self,
@@ -242,19 +259,24 @@ class LoggerStreamHandlerBase(ABC):
                         self.YAML_CHILDREN_SPACES_SEPARATOR
                         for _ in range(self._depth - 1)
                     ])
-            log_str = f'\n{depth_4_spaces}children:'
+            if self.log_style == LogStyleEnum.YAML:
+                log_str = f'\n{depth_4_spaces}children:'
+            elif self.log_style == LogStyleEnum.LINE:
+                log_str = \
+                    f'\n{self.YAML_SPACES_SEPARATOR}{depth_4_spaces}children:'
+            else:
+                raise Exception('Bug: Unimplemented code')
+
         elif self._depth == 0:
             if self.log_style == LogStyleEnum.YAML:
                 log_str = f'\n{self.YAML_DOCUMENT_SEPARATOR}'
-            else:
-                # TODO:
-                log_str = ''
 
         if self.log_style == LogStyleEnum.YAML:
             log_str += self.__create_yaml_elements_str(msg, log_level)
+        elif self.log_style == LogStyleEnum.LINE:
+            log_str += f'\n{self.__create_line_element_str(msg, log_level)}'
         else:
-            # TODO:
-            log_str = ''
+            raise Exception('Bug: Unimplemented code')
 
         return log_str
 
@@ -346,7 +368,7 @@ class LoggerStreamHandlerBase(ABC):
 
     def __create_yaml_elements_str(
             self, msg: str, log_level: LogLevelEnum) -> str:
-        depth_tabs = \
+        depth_spaces = \
             ''.join(
                 [f'{self.YAML_SPACES_SEPARATOR}  '
                  for _ in range(self._depth)])
@@ -354,7 +376,7 @@ class LoggerStreamHandlerBase(ABC):
         yaml_str = ''
 
         if self._depth > 0:
-            yaml_str = f'\n{depth_tabs[:-2]}- '
+            yaml_str = f'\n{depth_spaces[:-2]}- '
 
         sf = stack()[5]
 
@@ -363,17 +385,17 @@ class LoggerStreamHandlerBase(ABC):
 
         yaml_elements_str = \
             self.__create_yaml_elements(
-                depth_tabs, log_level, path, method, line_number, msg)
+                depth_spaces, log_level, path, method, line_number, msg)
 
         if self._depth > 0:
             yaml_elements_str = \
-                yaml_elements_str[len(f'\n{depth_tabs[:-2]}- '):]
+                yaml_elements_str[len(f'\n{depth_spaces[:-2]}- '):]
 
         return yaml_str + yaml_elements_str
 
     def __create_yaml_elements(
             self,
-            depth_tabs: str,
+            depth_spaces: str,
             log_level: LogLevelEnum,
             path: str,
             method: str,
@@ -384,7 +406,7 @@ class LoggerStreamHandlerBase(ABC):
             ''.join([
                 self.__create_yaml_element(
                     yaml_element,
-                    depth_tabs,
+                    depth_spaces,
                     log_level,
                     path, method,
                     line_number,
@@ -395,7 +417,7 @@ class LoggerStreamHandlerBase(ABC):
     def __create_yaml_element(
             self,
             yaml_element: LogElementEnum,
-            depth_tabs: str,
+            depth_spaces: str,
             log_level: LogLevelEnum,
             path: str,
             method: str,
@@ -403,33 +425,70 @@ class LoggerStreamHandlerBase(ABC):
             msg: str):
 
         if yaml_element == LogElementEnum.DATE:
-            return f'\n{self.__create_yaml_date_element(depth_tabs)}'
+            return f'\n{self.__create_yaml_date_element(depth_spaces)}'
 
         if yaml_element == LogElementEnum.LOG_LEVEL:
             log_level_str = \
-                self.__create_yaml_log_level_element(depth_tabs, log_level)
+                self.__create_yaml_log_level_element(depth_spaces, log_level)
             return f'\n{log_level_str}'
 
         if yaml_element == LogElementEnum.PATH:
-            return f'\n{self.__create_yaml_path_element(path, depth_tabs)}'
+            return f'\n{self.__create_yaml_path_element(path, depth_spaces)}'
 
         if yaml_element == LogElementEnum.METHOD:
-            return f'\n{self.__create_yaml_method_element(method, depth_tabs)}'
+            return f'\n{self.__create_yaml_method_element(method, depth_spaces)}'
 
         if yaml_element == LogElementEnum.LINE_NUMBER:
             return \
                 '\n' + self.__create_yaml_line_number_element(
-                    line_number, depth_tabs)
+                    line_number, depth_spaces)
 
         if yaml_element == LogElementEnum.MESSAGE:
             return \
-                f'\n{self.__create_yaml_line_message_element(msg, depth_tabs)}'
+                f'\n{self.__create_yaml_line_message_element(msg, depth_spaces)}'
 
         raise Exception(f'Bug: Yaml element {yaml_element} not implemented')
 
-    def __create_yaml_date_element(self, depth_tabs: str) -> str:
+    def __create_line_element_str(
+            self, msg: str, log_level: LogLevelEnum) -> str:
+        depth_spaces = \
+            ''.join(
+                [f'{self.YAML_SPACES_SEPARATOR}  '
+                 for _ in range(self._depth)])
+
+        sf = stack()[5]
+
+        path, method, line_number = \
+            self.__get_log_path_method_and_line_number_from_sf(sf)
+
         return \
-            f'{depth_tabs}{LogElementEnum.DATE.value}:' \
+            self.__create_line_element(
+                depth_spaces, log_level, path, method, line_number, msg)
+
+    def __create_line_element(
+            self,
+            depth_spaces: str,
+            log_level: LogLevelEnum,
+            path: str,
+            method: str,
+            line_number: str,
+            msg: str) -> str:
+        return \
+            depth_spaces \
+            + '- log: '\
+            + self.log_line_template\
+            .replace(
+                LogElementEnum.DATE.value,
+                datetime.now().strftime(self.log_format.date_format))\
+            .replace(LogElementEnum.LOG_LEVEL.value, log_level.name)\
+            .replace(LogElementEnum.PATH.value, path)\
+            .replace(LogElementEnum.METHOD.value, method)\
+            .replace(LogElementEnum.LINE_NUMBER.value, line_number)\
+            .replace(LogElementEnum.MESSAGE.value, msg)
+
+    def __create_yaml_date_element(self, depth_spaces: str) -> str:
+        return \
+            f'{depth_spaces}{LogElementEnum.DATE.value}:' \
             f' {datetime.now().strftime(self.log_format.date_format)}'
 
     def __update_depth_for_manual_increased_child_depth(self, fm_name: str):
@@ -494,14 +553,14 @@ class LoggerStreamHandlerBase(ABC):
 
     @classmethod
     def __create_yaml_log_level_element(
-            cls, depth_tabs: str, log_level: LogLevelEnum) -> str:
+            cls, depth_spaces: str, log_level: LogLevelEnum) -> str:
         return \
-            f'{depth_tabs}{LogElementEnum.LOG_LEVEL}:' \
+            f'{depth_spaces}{LogElementEnum.LOG_LEVEL}:' \
             f' {log_level}'
 
     @classmethod
     def set_log_style(cls, log_style: LogStyleEnum):
-        cls.__log_style = log_style
+        cls._log_style = log_style
 
     @classmethod
     def set_log_level(cls, level: LogLevelEnum):
@@ -512,31 +571,35 @@ class LoggerStreamHandlerBase(ABC):
         cls.__logger_format = logger_format
 
     @classmethod
-    def __create_yaml_path_element(cls, path: str, depth_tabs: str) -> str:
-        return f'{depth_tabs}{LogElementEnum.PATH.value}: {path}'
+    def set_log_line_template(cls, log_line_template: str):
+        cls._log_line_template = log_line_template
 
     @classmethod
-    def __create_yaml_method_element(cls, method: str, depth_tabs: str) -> str:
-        return f'{depth_tabs}{LogElementEnum.METHOD.value}: {method}'
+    def __create_yaml_path_element(cls, path: str, depth_spaces: str) -> str:
+        return f'{depth_spaces}{LogElementEnum.PATH.value}: {path}'
+
+    @classmethod
+    def __create_yaml_method_element(cls, method: str, depth_spaces: str) -> str:
+        return f'{depth_spaces}{LogElementEnum.METHOD.value}: {method}'
 
     @classmethod
     def __create_yaml_line_number_element(
-            cls, line_number: str, depth_tabs: str) -> str:
+            cls, line_number: str, depth_spaces: str) -> str:
         return \
-            f'{depth_tabs}'\
+            f'{depth_spaces}'\
             f'{LogElementEnum.LINE_NUMBER.value}: {line_number}'
 
     @classmethod
     def __create_yaml_line_message_element(
-            cls, msg: str, depth_tabs: str) -> str:
+            cls, msg: str, depth_spaces: str) -> str:
 
-        element = f'{depth_tabs}{LogElementEnum.MESSAGE.value}: '
+        element = f'{depth_spaces}{LogElementEnum.MESSAGE.value}: '
 
         if '\n' in msg:
-            depth_tabs_of_str = f'{depth_tabs}\t\n'
+            depth_spaces_of_str = f'{depth_spaces}\t\n'
             message_list = msg.split('\n')
-            message_with_tabs = depth_tabs_of_str.join(message_list)
-            element += f'|\n{depth_tabs_of_str}{message_with_tabs}'
+            message_with_tabs = depth_spaces_of_str.join(message_list)
+            element += f'|\n{depth_spaces_of_str}{message_with_tabs}'
         else:
             element += msg
 

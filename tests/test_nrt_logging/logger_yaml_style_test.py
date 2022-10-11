@@ -1,36 +1,13 @@
-import sys
 import unittest
 from deepdiff import DeepDiff
-from io import StringIO
-from typing import Optional
 import yaml
 from nrt_logging.log_format import LogElementEnum
 from nrt_logging.log_level import LogLevelEnum
 from nrt_logging.logger import logger_manager, NrtLogger
 from nrt_logging.logger_stream_handlers import \
-    ConsoleStreamHandler, ManualDepthEnum, LoggerStreamHandlerBase
-
-r_stdout: Optional[StringIO] = None
-
-
-def stdout_redirect(func):
-
-    def inner(*args, **kwargs):
-        global r_stdout
-
-        temp_stdout = sys.stdout
-        sys.stdout = r_stdout = StringIO()
-
-        func(*args, **kwargs)
-
-        sys.stdout = temp_stdout
-        r_stdout = None
-
-    return inner
-
-
-NAME_1 = 'name_1'
-NAME_2 = 'name_2'
+    ConsoleStreamHandler, ManualDepthEnum, LoggerStreamHandlerBase, LogStyleEnum
+from tests.test_nrt_logging.test_base import \
+    stdout_redirect, NAME_1, r_stdout
 
 
 class A:
@@ -99,35 +76,39 @@ class B:
         self.__logger.info(self.MSG_3)
 
 
-CA_A_LINE = 50
-CA_B_LINE = 54
-CB_A_LINE = 79
-CB_B_LINE = 84
+CA_A_LINE = 27
+CA_B_LINE = 31
+CB_A_LINE = 56
+CB_B_LINE = 61
 
 
 TEST_FILE_NAME = 'logger_yaml_style_test.py'
 
 
 class NrtLoggerManagerTests(unittest.TestCase):
+
+    @classmethod
+    def setUpClass(cls):
+        ConsoleStreamHandler.set_log_style(LogStyleEnum.YAML)
+
     def setUp(self):
         logger_1 = logger_manager.get_logger(NAME_1)
         logger_1.close_stream_handlers()
 
-    def test_01_get_logger(self):
+    def test_get_logger(self):
         self.assertTrue(
             isinstance(logger_manager.get_logger(NAME_1), NrtLogger))
 
     @stdout_redirect
-    def test_02_logger_yaml(self):
+    def test_logger_yaml(self):
         sh = ConsoleStreamHandler()
         logger = logger_manager.get_logger(NAME_1)
         logger.add_stream_handler(sh)
         msg = 'abc'
         logger.info(msg)
         so = r_stdout.getvalue()
-
         expected_path = f'{TEST_FILE_NAME}.{self.__class__.__name__}'
-        expected_method_name = 'test_02_logger_yaml'
+        expected_method_name = 'test_logger_yaml'
 
         yaml_dict = yaml.safe_load(so)
 
@@ -136,14 +117,14 @@ class NrtLoggerManagerTests(unittest.TestCase):
                 LogElementEnum.LOG_LEVEL.value: LogLevelEnum.INFO.name,
                 LogElementEnum.PATH.value: expected_path,
                 LogElementEnum.METHOD.value: expected_method_name,
-                LogElementEnum.LINE_NUMBER.value: 126,
+                LogElementEnum.LINE_NUMBER.value: 108,
                 LogElementEnum.MESSAGE.value: msg
             }
 
         self.__verify_yaml_dict(yaml_dict, expected_yaml_dict)
 
     @stdout_redirect
-    def test_03_logger_yaml_manual_depth(self):
+    def test_logger_yaml_manual_depth(self):
         sh = ConsoleStreamHandler()
         logger = logger_manager.get_logger(NAME_1)
         logger.add_stream_handler(sh)
@@ -154,7 +135,7 @@ class NrtLoggerManagerTests(unittest.TestCase):
         so = r_stdout.getvalue()
 
         expected_path = f'{TEST_FILE_NAME}.{self.__class__.__name__}'
-        expected_method_name = 'test_03_logger_yaml_manual_depth'
+        expected_method_name = 'test_logger_yaml_manual_depth'
 
         yaml_dict = yaml.safe_load(so)
 
@@ -162,14 +143,14 @@ class NrtLoggerManagerTests(unittest.TestCase):
             LogElementEnum.LOG_LEVEL.value: LogLevelEnum.WARN.name,
             LogElementEnum.PATH.value: expected_path,
             LogElementEnum.METHOD.value: expected_method_name,
-            LogElementEnum.LINE_NUMBER.value: 151,
+            LogElementEnum.LINE_NUMBER.value: 132,
             LogElementEnum.MESSAGE.value: msg,
             'children': [
                 {
                     LogElementEnum.LOG_LEVEL.value: LogLevelEnum.ERROR.name,
                     LogElementEnum.PATH.value: expected_path,
                     LogElementEnum.METHOD.value: expected_method_name,
-                    LogElementEnum.LINE_NUMBER.value: 153,
+                    LogElementEnum.LINE_NUMBER.value: 134,
                     LogElementEnum.MESSAGE.value: child_msg
                 }
             ]
@@ -178,7 +159,7 @@ class NrtLoggerManagerTests(unittest.TestCase):
         self.__verify_yaml_dict(yaml_dict, expected_yaml_dict)
 
     @stdout_redirect
-    def test_04_logger_yaml_depth(self):
+    def test_logger_yaml_depth(self):
         sh = ConsoleStreamHandler()
         logger = logger_manager.get_logger(NAME_1)
         logger.add_stream_handler(sh)
@@ -254,7 +235,7 @@ class NrtLoggerManagerTests(unittest.TestCase):
             cb_b_ca_b_yaml, expected_yaml_dict)
 
     @stdout_redirect
-    def test_05_logger_yaml_depth_and_manual_depth(self):
+    def test_logger_yaml_depth_and_manual_depth(self):
         sh = ConsoleStreamHandler()
         logger = logger_manager.get_logger(NAME_1)
         logger.add_stream_handler(sh)
@@ -276,7 +257,7 @@ class NrtLoggerManagerTests(unittest.TestCase):
             LogElementEnum.LOG_LEVEL.value: LogLevelEnum.CRITICAL.name,
             LogElementEnum.PATH.value: f'{TEST_FILE_NAME}.B',
             LogElementEnum.METHOD.value: 'c_manual',
-            LogElementEnum.LINE_NUMBER.value: 88,
+            LogElementEnum.LINE_NUMBER.value: 65,
             LogElementEnum.MESSAGE.value: B.MSG_INCREASE,
             'children': [
                 {
@@ -300,7 +281,7 @@ class NrtLoggerManagerTests(unittest.TestCase):
                     LogElementEnum.LOG_LEVEL.value: LogLevelEnum.ERROR.name,
                     LogElementEnum.PATH.value: f'{TEST_FILE_NAME}.B',
                     LogElementEnum.METHOD.value: 'c_manual',
-                    LogElementEnum.LINE_NUMBER.value: 92,
+                    LogElementEnum.LINE_NUMBER.value: 69,
                     LogElementEnum.MESSAGE.value: B.MSG_INCREASE,
                 }
             ]
@@ -315,7 +296,7 @@ class NrtLoggerManagerTests(unittest.TestCase):
             LogElementEnum.LOG_LEVEL.value: LogLevelEnum.INFO.name,
             LogElementEnum.PATH.value: f'{TEST_FILE_NAME}.B',
             LogElementEnum.METHOD.value: 'c_manual',
-            LogElementEnum.LINE_NUMBER.value: 93,
+            LogElementEnum.LINE_NUMBER.value: 70,
             LogElementEnum.MESSAGE.value: B.MSG_DECREASE
         }
 
@@ -327,7 +308,7 @@ class NrtLoggerManagerTests(unittest.TestCase):
             LogElementEnum.LOG_LEVEL.value: LogLevelEnum.INFO.name,
             LogElementEnum.PATH.value: f'{TEST_FILE_NAME}.B',
             LogElementEnum.METHOD.value: 'c_manual',
-            LogElementEnum.LINE_NUMBER.value: 94,
+            LogElementEnum.LINE_NUMBER.value: 71,
             LogElementEnum.MESSAGE.value: B.MSG_DECREASE
         }
 
@@ -355,7 +336,7 @@ class NrtLoggerManagerTests(unittest.TestCase):
         self.__verify_yaml_dict(cb_b_ca_b_yaml, expected_yaml_dict)
 
     @stdout_redirect
-    def test_06_logger_yaml_increase_and_decrease_depth_manually(self):
+    def test_logger_yaml_increase_and_decrease_depth_manually(self):
         sh = ConsoleStreamHandler()
         logger = logger_manager.get_logger(NAME_1)
         logger.add_stream_handler(sh)
@@ -373,7 +354,7 @@ class NrtLoggerManagerTests(unittest.TestCase):
 
         class_path = f'{TEST_FILE_NAME}.{self.__class__.__name__}'
         method_name = \
-            'test_06_logger_yaml_increase_and_decrease_depth_manually'
+            'test_logger_yaml_increase_and_decrease_depth_manually'
 
         so = r_stdout.getvalue()
 
@@ -388,14 +369,14 @@ class NrtLoggerManagerTests(unittest.TestCase):
             LogElementEnum.LOG_LEVEL.value: LogLevelEnum.INFO.name,
             LogElementEnum.PATH.value: class_path,
             LogElementEnum.METHOD.value: method_name,
-            LogElementEnum.LINE_NUMBER.value: 366,
+            LogElementEnum.LINE_NUMBER.value: 347,
             LogElementEnum.MESSAGE.value: msg_1,
             'children': [
                 {
                     LogElementEnum.LOG_LEVEL.value: LogLevelEnum.ERROR.name,
                     LogElementEnum.PATH.value: class_path,
                     LogElementEnum.METHOD.value: method_name,
-                    LogElementEnum.LINE_NUMBER.value: 368,
+                    LogElementEnum.LINE_NUMBER.value: 349,
                     LogElementEnum.MESSAGE.value: msg_2,
                     'children': [
                         {
@@ -403,7 +384,7 @@ class NrtLoggerManagerTests(unittest.TestCase):
                                 LogLevelEnum.CRITICAL.name,
                             LogElementEnum.PATH.value: class_path,
                             LogElementEnum.METHOD.value: method_name,
-                            LogElementEnum.LINE_NUMBER.value: 370,
+                            LogElementEnum.LINE_NUMBER.value: 351,
                             LogElementEnum.MESSAGE.value: msg_1
                         }
                     ]
@@ -419,7 +400,7 @@ class NrtLoggerManagerTests(unittest.TestCase):
             LogElementEnum.LOG_LEVEL.value: LogLevelEnum.ERROR.name,
             LogElementEnum.PATH.value: class_path,
             LogElementEnum.METHOD.value: method_name,
-            LogElementEnum.LINE_NUMBER.value: 372,
+            LogElementEnum.LINE_NUMBER.value: 353,
             LogElementEnum.MESSAGE.value: msg_1
         }
 
