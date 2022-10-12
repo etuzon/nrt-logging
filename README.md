@@ -103,4 +103,37 @@ children:
         line_number: 19
         message: Child 2
 
+-------------------------------------------------------------------------------------------------------
 
+Example of changing hierarchy manually
+
+from nrt_logging.log_level import LogLevelEnum
+from nrt_logging.logger import logger_manager
+from nrt_logging.logger_stream_handlers import ConsoleStreamHandler, LogStyleEnum
+
+
+sh = ConsoleStreamHandler()
+sh.log_level = LogLevelEnum.TRACE
+sh.log_style = LogStyleEnum.LINE
+logger = logger_manager.get_logger('NAME_1')
+logger.add_stream_handler(sh)
+
+logger.info('main level log')
+logger.increase_depth()
+logger.info('child 1')
+logger.increase_depth()
+logger.info('child 1_1')
+logger.decrease_depth()
+logger.info('child 2')
+logger.decrease_depth()
+logger.info('continue main level')
+
+Output:
+
+- log: 2022-10-13 00:35:43.310527 [INFO] [test_manual_hierarchy_logging.py.<module>:12] main level log
+  children:
+    - log: 2022-10-13 00:35:43.318527 [INFO] [test_manual_hierarchy_logging.py.<module>:14] child 1
+      children:
+        - log: 2022-10-13 00:35:43.325527 [INFO] [test_manual_hierarchy_logging.py.<module>:16] child 1_1
+    - log: 2022-10-13 00:35:43.333531 [INFO] [test_manual_hierarchy_logging.py.<module>:18] child 2
+- log: 2022-10-13 00:35:43.341532 [INFO] [test_manual_hierarchy_logging.py.<module>:20] continue main level
