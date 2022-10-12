@@ -1,5 +1,5 @@
 [project]
-name = 'NRT Logging'
+name = 'nrt-logging'
 version = '0.9.0'
 authors = [
   { name='Eyal Tuzon', email='eyal.tuzon.dev@gmail.com' },
@@ -12,6 +12,9 @@ classifiers = [
     'License :: OSI Approved :: GNU General Public License v3.0',
     'Operating System :: OS Independent',
 ]
+dynamic = ["dependencies"]
+[tool.setuptools.dynamic]
+dependencies = {file = ["requirements.txt"]}
 
 [project.urls]
 'Homepage' = 'https://github.com/etuzon/Python-NRT-Logging'
