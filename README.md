@@ -8,10 +8,10 @@ In addition to automatic heirarchy, manually heirarchy is supported.
 
 Example:
 
-# Example of
-#  - A.a1() - WARN
-#    - B.child_1() - INFO
-#      - B.child_2() - INFO
+Example of
+ - A.a1() - WARN
+   - B.child_1() - INFO
+     - B.child_2() - INFO
 
 from nrt_logging.logger import logger_manager, NrtLogger
 from nrt_logging.logger_stream_handlers import \
@@ -47,7 +47,7 @@ class A:
         self.__child.child_1()
 
 
-# Init logger with LINE style
+Init logger with LINE style
 
 def logging_line_style():
     sh = ConsoleStreamHandler()
@@ -67,7 +67,7 @@ Output:
       children:
         - log: 2022-10-13 00:22:57.700451 [INFO] [test_line_style.py.Child.child_2:17] Child 2
         
-# Init logger with YAML style
+Init logger with YAML style
 
 def logging_yaml_style():
     sh = ConsoleStreamHandler()
