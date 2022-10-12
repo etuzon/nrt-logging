@@ -1,18 +1,17 @@
 import unittest
 import yaml
-
 from nrt_logging.log_format import LogFormat
 from nrt_logging.log_level import LogLevelEnum
-from nrt_logging.logger import logger_manager
+from nrt_logging.logger import logger_manager, NrtLoggerManager
 from nrt_logging.logger_stream_handlers import \
     ConsoleStreamHandler, LogStyleEnum, ManualDepthEnum
 from tests.test_nrt_logging.test_base import \
-    NAME_1, stdout_redirect, r_stdout, is_date_in_format
+    NAME_1, stdout_redirect, r_stdout, TestBase
 
 TEST_FILE_NAME = 'logger_line_style_test.py'
 
 
-class NrtLoggerManagerTests(unittest.TestCase):
+class NrtLoggerManagerTests(TestBase):
 
     def setUp(self):
         logger_1 = logger_manager.get_logger(NAME_1)
@@ -22,10 +21,11 @@ class NrtLoggerManagerTests(unittest.TestCase):
     def test_logger_line(self):
         sh = ConsoleStreamHandler()
         sh.log_style = LogStyleEnum.LINE
+        sh.log_level = LogLevelEnum.TRACE
         logger = logger_manager.get_logger(NAME_1)
         logger.add_stream_handler(sh)
         msg = 'abc'
-        logger.info(msg)
+        logger.trace(msg)
         so = r_stdout.getvalue()
 
         log_list = yaml.safe_load(so)
@@ -33,10 +33,10 @@ class NrtLoggerManagerTests(unittest.TestCase):
         self.assertEqual(len(log_list), 1)
         log_line = log_list[0]['log']
 
-        self.__verify_log_line(
+        self._verify_log_line(
             log_line,
             LogFormat.DEFAULT_DATE_FORMAT,
-            LogLevelEnum.INFO,
+            LogLevelEnum.TRACE,
             f'{TEST_FILE_NAME}.{self.__class__.__name__}',
             'test_logger_line',
             28,
@@ -72,7 +72,7 @@ class NrtLoggerManagerTests(unittest.TestCase):
         self.assertEqual(len(log_list), 1)
         log_dict = log_list[0]
 
-        self.__verify_log_line(
+        self._verify_log_line(
             log_dict.get('log'),
             LogFormat.DEFAULT_DATE_FORMAT,
             LogLevelEnum.WARN,
@@ -85,7 +85,7 @@ class NrtLoggerManagerTests(unittest.TestCase):
         self.assertIsNotNone(children)
         self.assertEqual(len(children), 3)
 
-        self.__verify_log_line(
+        self._verify_log_line(
             children[0].get('log'),
             LogFormat.DEFAULT_DATE_FORMAT,
             LogLevelEnum.ERROR,
@@ -94,7 +94,7 @@ class NrtLoggerManagerTests(unittest.TestCase):
             56,
             child_msg_1)
 
-        self.__verify_log_line(
+        self._verify_log_line(
             children[1].get('log'),
             LogFormat.DEFAULT_DATE_FORMAT,
             LogLevelEnum.CRITICAL,
@@ -107,7 +107,7 @@ class NrtLoggerManagerTests(unittest.TestCase):
         self.assertIsNotNone(children_2)
         self.assertEqual(len(children_2), 1)
 
-        self.__verify_log_line(
+        self._verify_log_line(
             children_2[0].get('log'),
             LogFormat.DEFAULT_DATE_FORMAT,
             LogLevelEnum.WARN,
@@ -116,7 +116,7 @@ class NrtLoggerManagerTests(unittest.TestCase):
             62,
             child_msg_3)
 
-        self.__verify_log_line(
+        self._verify_log_line(
             children[2].get('log'),
             LogFormat.DEFAULT_DATE_FORMAT,
             LogLevelEnum.INFO,
@@ -125,34 +125,74 @@ class NrtLoggerManagerTests(unittest.TestCase):
             64,
             child_msg_2)
 
-    def __verify_log_line(
-            self,
-            log_line: str,
-            expected_date_format: str,
-            expected_log_level: LogLevelEnum,
-            expected_class_path: str,
-            expected_method_name: str,
-            expected_line_number: int,
-            expected_msg: str):
-        log_line_split = log_line.split(' ')
+    @stdout_redirect
+    def test_logger_line_multiline_message(self):
+        sh = ConsoleStreamHandler()
+        sh.log_style = LogStyleEnum.LINE
+        logger = logger_manager.get_logger(NAME_1)
+        logger.add_stream_handler(sh)
 
-        date_1 = log_line_split[0]
-        date_2 = log_line_split[1]
-        expected_date_list = expected_date_format.split(' ')
-        expected_date_format_1 = expected_date_list[0]
-        expected_date_format_2 = expected_date_list[1]
-        self.assertTrue(is_date_in_format(date_1, expected_date_format_1))
-        self.assertTrue(is_date_in_format(date_2, expected_date_format_2))
+        msg = '\nabc\nqwer'
+        logger.warn(msg, ManualDepthEnum.INCREASE)
 
-        self.assertTrue(log_line_split[2] == f'[{expected_log_level.name}]')
+        child_msg_1 = 'child_msg_1\nqwer\n\nq\n'
+        logger.error(child_msg_1, ManualDepthEnum.INCREASE)
 
-        expected_code_location = \
-            f'{expected_class_path}.{expected_method_name}' \
-            f':{expected_line_number}'
+        so = r_stdout.getvalue()
 
-        self.assertTrue(log_line_split[3] == f'[{expected_code_location}]')
+        expected_path = f'{TEST_FILE_NAME}.{self.__class__.__name__}'
+        expected_method_name = 'test_logger_line_multiline_message'
 
-        self.assertTrue(log_line_split[4] == expected_msg)
+        log_list = yaml.safe_load(so)
+        self.assertEqual(len(log_list), 1)
+        log_dict = log_list[0]
+
+        self._verify_log_line(
+            log_dict.get('log'),
+            LogFormat.DEFAULT_DATE_FORMAT,
+            LogLevelEnum.WARN,
+            expected_path,
+            expected_method_name,
+            136,
+            msg)
+
+        children = log_dict.get('children')
+        self.assertIsNotNone(children)
+        self.assertEqual(len(children), 1)
+
+        self._verify_log_line(
+            children[0].get('log'),
+            LogFormat.DEFAULT_DATE_FORMAT,
+            LogLevelEnum.ERROR,
+            expected_path,
+            expected_method_name,
+            139,
+            child_msg_1)
+
+    @stdout_redirect
+    def test_close_logger(self):
+        sh = ConsoleStreamHandler()
+        sh.log_style = LogStyleEnum.LINE
+        logger = logger_manager.get_logger(NAME_1)
+        logger.add_stream_handler(sh)
+        msg = 'abc'
+        logger.info(msg)
+        so = r_stdout.getvalue()
+        self.assertTrue(so)
+
+        logger_manager.close_logger(NAME_1)
+
+        with self.assertRaises(Exception) as e:
+            logger.info('a123')
+
+        self.assertTrue('Unable write to logs' in str(e.exception))
+
+    def test_init_logger_manager_negative(self):
+        with self.assertRaises(Exception) as e:
+            NrtLoggerManager()
+
+        self.assertTrue(
+            'NrtLoggerManager should not be initiated' in str(e.exception))
 
 
 if __name__ == '__main__':

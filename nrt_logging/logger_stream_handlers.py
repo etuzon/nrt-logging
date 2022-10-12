@@ -39,9 +39,12 @@ class LoggerStreamHandlerBase(ABC):
     YAML_DOCUMENT_SEPARATOR = '---'
 
     LOG_LINE_DEFAULT_TEMPLATE = \
-        f'{LogElementEnum.DATE.value} [{LogElementEnum.LOG_LEVEL.value}]'\
-        f' [{LogElementEnum.PATH.value}.{LogElementEnum.METHOD.value}'\
-        f':{LogElementEnum.LINE_NUMBER.value}] {LogElementEnum.MESSAGE.value}'
+        f'{LogElementEnum.DATE.line_format}' \
+        f' [{LogElementEnum.LOG_LEVEL.line_format}]'\
+        f' [{LogElementEnum.PATH.line_format}.' \
+        f'{LogElementEnum.METHOD.line_format}'\
+        f':{LogElementEnum.LINE_NUMBER.line_format}]' \
+        f' {LogElementEnum.MESSAGE.line_format}'
 
     _log_level: LogLevelEnum = None
     _log_format: LogFormat = None
@@ -450,7 +453,7 @@ class LoggerStreamHandlerBase(ABC):
                 [f'{self.YAML_SPACES_SEPARATOR}  '
                  for _ in range(self._depth)])
 
-        sf = stack()[5]
+        sf = stack()[self._stack_log_start_index + 1]
 
         path, method, line_number = \
             self.__get_log_path_method_and_line_number_from_sf(sf)
@@ -467,18 +470,29 @@ class LoggerStreamHandlerBase(ABC):
             method: str,
             line_number: str,
             msg: str) -> str:
-        return \
-            depth_spaces \
-            + '- log: '\
-            + self.log_line_template\
+
+        log_line = self.log_line_template\
             .replace(
-                LogElementEnum.DATE.value,
+                LogElementEnum.DATE.line_format,
                 datetime.now().strftime(self.log_format.date_format))\
-            .replace(LogElementEnum.LOG_LEVEL.value, log_level.name)\
-            .replace(LogElementEnum.PATH.value, path)\
-            .replace(LogElementEnum.METHOD.value, method)\
-            .replace(LogElementEnum.LINE_NUMBER.value, line_number)\
-            .replace(LogElementEnum.MESSAGE.value, msg)
+            .replace(LogElementEnum.LOG_LEVEL.line_format, log_level.name)\
+            .replace(LogElementEnum.PATH.line_format, path)\
+            .replace(LogElementEnum.METHOD.line_format, method)\
+            .replace(LogElementEnum.LINE_NUMBER.line_format, line_number)\
+            .replace(LogElementEnum.MESSAGE.line_format, msg)
+
+        if '\n' in log_line:
+            multiline_operator = self.__get_yaml_multiline_operator(log_line)
+            depth_spaces_of_str = \
+                f'\n{depth_spaces}{self.YAML_CHILDREN_SPACES_SEPARATOR}'
+            log_line_list = log_line.split('\n')
+            log_line_with_tabs = depth_spaces_of_str.join(log_line_list)
+            return \
+                f'{depth_spaces}' \
+                f'- log: {multiline_operator}' \
+                f'{depth_spaces_of_str}{log_line_with_tabs}'
+        else:
+            return f'{depth_spaces}- log: {log_line}'
 
     def __create_yaml_date_element(self, depth_spaces: str) -> str:
         return \
@@ -591,10 +605,15 @@ class LoggerStreamHandlerBase(ABC):
         element = f'{depth_spaces}{LogElementEnum.MESSAGE.value}: '
 
         if '\n' in msg:
-            depth_spaces_of_str = f'{depth_spaces}\t\n'
+            multiline_operator = cls.__get_yaml_multiline_operator(msg)
+
+            depth_spaces_of_str = \
+                f'\n{depth_spaces}{cls.YAML_SPACES_SEPARATOR}'
             message_list = msg.split('\n')
             message_with_tabs = depth_spaces_of_str.join(message_list)
-            element += f'|\n{depth_spaces_of_str}{message_with_tabs}'
+            element += \
+                f'{multiline_operator}' \
+                f'{depth_spaces_of_str}{message_with_tabs}'
         else:
             element += msg
 
@@ -619,6 +638,10 @@ class LoggerStreamHandlerBase(ABC):
     @classmethod
     def __create_fm_name(cls, path: str, method: str) -> str:
         return f'{path}_{method}'
+
+    @classmethod
+    def __get_yaml_multiline_operator(cls, yaml_text: str):
+        return '|' if yaml_text[-1] == '\n' else '|-'
 
 
 class ConsoleStreamHandler(LoggerStreamHandlerBase):

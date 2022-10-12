@@ -407,6 +407,41 @@ class NrtLoggerManagerTests(unittest.TestCase):
 
         self.__verify_yaml_dict(yaml_dict, expected_yaml_dict)
 
+    @stdout_redirect
+    def test_logger_yaml_multiline_message(self):
+        sh = ConsoleStreamHandler()
+        logger = logger_manager.get_logger(NAME_1)
+        logger.add_stream_handler(sh)
+        msg = 'abc\nqwe\n\n123\n'
+        logger.critical(msg, ManualDepthEnum.INCREASE)
+        child_msg = 'child msg\n123\nasdf'
+        logger.error(child_msg, ManualDepthEnum.INCREASE)
+        so = r_stdout.getvalue()
+
+        expected_path = f'{TEST_FILE_NAME}.{self.__class__.__name__}'
+        expected_method_name = 'test_logger_yaml_multiline_message'
+
+        yaml_dict = yaml.safe_load(so)
+
+        expected_yaml_dict = {
+            LogElementEnum.LOG_LEVEL.value: LogLevelEnum.CRITICAL.name,
+            LogElementEnum.PATH.value: expected_path,
+            LogElementEnum.METHOD.value: expected_method_name,
+            LogElementEnum.LINE_NUMBER.value: 416,
+            LogElementEnum.MESSAGE.value: msg,
+            'children': [
+                {
+                    LogElementEnum.LOG_LEVEL.value: LogLevelEnum.ERROR.name,
+                    LogElementEnum.PATH.value: expected_path,
+                    LogElementEnum.METHOD.value: expected_method_name,
+                    LogElementEnum.LINE_NUMBER.value: 418,
+                    LogElementEnum.MESSAGE.value: child_msg
+                }
+            ]
+        }
+
+        self.__verify_yaml_dict(yaml_dict, expected_yaml_dict)
+
     def __verify_yaml_dict(self, yaml_dict, expected_yaml_dict):
         exclude_path = f"\['{LogElementEnum.DATE.value}'\]$"
         cmp_diff = \
