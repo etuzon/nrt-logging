@@ -9,10 +9,11 @@ In addition to automatic hierarchy, manually hierarchy is supported.
 ###Example:
 
 Example of
+```
  - A.a1() - WARN
    - B.child_1() - INFO
      - B.child_2() - INFO
-
+```
 ```
 from nrt_logging.logger import logger_manager, NrtLogger
 from nrt_logging.logger_stream_handlers import \
@@ -86,7 +87,7 @@ logging_yaml_style()
 ```
 
 ### Output
-
+```
 ---
 date: 2022-10-13 00:29:52.548451
 log_level: WARN
@@ -108,7 +109,7 @@ children:
         method: child_2
         line_number: 19
         message: Child 2
-      
+```   
 ## Example of changing hierarchy manually
 
 ```
@@ -135,7 +136,7 @@ logger.info('continue main level')
 ```
 
 ### Output:
-
+```
 - log: 2022-10-13 00:35:43.310527 [INFO] [test_manual_hierarchy_logging.py.<module>:12] main level log
   children:
     - log: 2022-10-13 00:35:43.318527 [INFO] [test_manual_hierarchy_logging.py.<module>:14] child 1
@@ -143,3 +144,4 @@ logger.info('continue main level')
         - log: 2022-10-13 00:35:43.325527 [INFO] [test_manual_hierarchy_logging.py.<module>:16] child 1_1
     - log: 2022-10-13 00:35:43.333531 [INFO] [test_manual_hierarchy_logging.py.<module>:18] child 2
 - log: 2022-10-13 00:35:43.341532 [INFO] [test_manual_hierarchy_logging.py.<module>:20] continue main level
+```
