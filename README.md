@@ -1,18 +1,19 @@
-Hierarchical logging in yaml format.
+#Hierarchical logging in yaml format.
 
-Heirarchial logging help to group logs that related to the same code flow.
+Hierarchical logging help to group logs that related to the same code flow.
 
 Logging fields can be in Yaml format or in Line format.
 
-In addition to automatic heirarchy, manually heirarchy is supported.
+In addition to automatic hierarchy, manually hierarchy is supported.
 
-Example:
+###Example:
 
 Example of
  - A.a1() - WARN
    - B.child_1() - INFO
      - B.child_2() - INFO
 
+```
 from nrt_logging.logger import logger_manager, NrtLogger
 from nrt_logging.logger_stream_handlers import \
     ConsoleStreamHandler, LogStyleEnum
@@ -46,9 +47,11 @@ class A:
         self.__logger.warn('Message 1')
         self.__child.child_1()
 
+```
 
-Init logger with LINE style
+## Init logger with LINE style
 
+```
 def logging_line_style():
     sh = ConsoleStreamHandler()
     sh.log_style = LogStyleEnum.LINE
@@ -58,8 +61,9 @@ def logging_line_style():
     a.a1()
  
 logging_line_style()
+```
 
-Output:
+### Output
 
 - log: 2022-10-13 00:22:57.676415 [WARN] [test_line_style.py.A.a1:29] Message 1
   children:
@@ -67,8 +71,9 @@ Output:
       children:
         - log: 2022-10-13 00:22:57.700451 [INFO] [test_line_style.py.Child.child_2:17] Child 2
         
-Init logger with YAML style
+## Init logger with YAML style
 
+```
 def logging_yaml_style():
     sh = ConsoleStreamHandler()
     sh.log_style = LogStyleEnum.YAML
@@ -78,8 +83,9 @@ def logging_yaml_style():
     a.a1()
 
 logging_yaml_style()
+```
 
-Output:
+### Output
 
 ---
 date: 2022-10-13 00:29:52.548451
@@ -102,11 +108,10 @@ children:
         method: child_2
         line_number: 19
         message: Child 2
+      
+## Example of changing hierarchy manually
 
--------------------------------------------------------------------------------------------------------
-
-Example of changing hierarchy manually
-
+```
 from nrt_logging.log_level import LogLevelEnum
 from nrt_logging.logger import logger_manager
 from nrt_logging.logger_stream_handlers import ConsoleStreamHandler, LogStyleEnum
@@ -127,8 +132,9 @@ logger.decrease_depth()
 logger.info('child 2')
 logger.decrease_depth()
 logger.info('continue main level')
+```
 
-Output:
+### Output:
 
 - log: 2022-10-13 00:35:43.310527 [INFO] [test_manual_hierarchy_logging.py.<module>:12] main level log
   children:

@@ -1,6 +1,6 @@
 [project]
 name = 'nrt-logging'
-version = '0.9.0'
+version = '1.0.0.b1'
 authors = [
   { name='Eyal Tuzon', email='eyal.tuzon.dev@gmail.com' },
 ]
@@ -9,13 +9,16 @@ readme = 'README.md'
 requires-python = '>=3.10'
 classifiers = [
     'Programming Language :: Python :: 3',
-    'License :: OSI Approved :: GNU General Public License v3.0',
+    'License :: OSI Approved :: GNU General Public License v3 or later (GPLv3+)',
     'Operating System :: OS Independent',
 ]
-dynamic = ["dependencies"]
+dynamic = ['dependencies']
 [tool.setuptools.dynamic]
-dependencies = {file = ["requirements.txt"]}
+dependencies = {file = ['requirements.txt']}
 
 [project.urls]
 'Homepage' = 'https://github.com/etuzon/Python-NRT-Logging'
 'Bug Tracker' = 'https://github.com/etuzon/Python-NRT-Logging/issues'
+
+[tool.setuptools]
+py-modules = []

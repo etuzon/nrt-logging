@@ -6,3 +6,6 @@ venv*/*
 coverage_report/html
 coverage_report/html/*
 temp
+dist
+nrt_logging.egg-info
+build
