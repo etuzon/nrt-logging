@@ -2,7 +2,7 @@ import unittest
 import yaml
 from nrt_logging.log_format import LogFormat
 from nrt_logging.log_level import LogLevelEnum
-from nrt_logging.logger import logger_manager, NrtLoggerManager
+from nrt_logging.logger_manager import logger_manager, NrtLoggerManager
 from nrt_logging.logger_stream_handlers import \
     ConsoleStreamHandler, LogStyleEnum, ManualDepthEnum
 from tests.test_nrt_logging.test_base import \
@@ -182,13 +182,13 @@ class NrtLoggerManagerTests(TestBase):
 
         logger_manager.close_logger(NAME_1)
 
-        with self.assertRaises(Exception) as e:
+        with self.assertRaises(RuntimeError) as e:
             logger.info('a123')
 
         self.assertTrue('Unable write to logs' in str(e.exception))
 
     def test_init_logger_manager_negative(self):
-        with self.assertRaises(Exception) as e:
+        with self.assertRaises(RuntimeError) as e:
             NrtLoggerManager()
 
         self.assertTrue(

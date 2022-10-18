@@ -17,6 +17,8 @@ class NrtLogger:
 
     __stream_handler_list: list[LoggerStreamHandlerBase]
 
+    __is_debug: bool = False
+
     def __init__(self):
         self.__stream_handler_list = []
 
@@ -91,43 +93,16 @@ class NrtLogger:
 
         self.__stream_handler_list = []
 
+    @property
+    def is_debug(self) -> bool:
+        return self.__is_debug
+
+    @is_debug.setter
+    def is_debug(self, is_debug: bool):
+        self.__is_debug = is_debug
+
     def __verify_stream_handler_list_not_empty(self):
         if not self.__stream_handler_list:
-            raise Exception(
+            raise RuntimeError(
                 'Unable write to logs'
                 ' if no stream handler attached to logger')
-
-
-class NrtLoggerManager:
-    __is_running: bool = False
-    __logger_dict: dict[str, NrtLogger]
-
-    def __init__(self):
-        self.__verify_not_initiated()
-        self.__logger_dict = {}
-
-    def get_logger(self, name: str) -> NrtLogger:
-        yaml_logger = self.__logger_dict.get(name)
-
-        if yaml_logger is None:
-            self.__logger_dict[name] = NrtLogger()
-
-        return self.__logger_dict[name]
-
-    def close_logger(self, name):
-        logger = self.__logger_dict.get(name)
-
-        if logger:
-            logger.close_stream_handlers()
-
-    @classmethod
-    def __verify_not_initiated(cls):
-        if cls.__is_running:
-            raise Exception(
-                'NrtLoggerManager should not be initiated.'
-                ' Please use yaml_logging')
-
-        cls.__is_running = True
-
-
-logger_manager = NrtLoggerManager()

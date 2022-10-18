@@ -8,7 +8,7 @@ class LogElementEnumTests(unittest.TestCase):
         self.assertEqual(LogElementEnum.MESSAGE.name, 'message')
 
     def test_line_format(self):
-        self.assertEqual(LogElementEnum.DATE.name, '$date$')
+        self.assertEqual(LogElementEnum.DATE.line_format, '$date$')
 
     def test_str(self):
         self.assertEqual(str(LogElementEnum.MESSAGE), 'message')

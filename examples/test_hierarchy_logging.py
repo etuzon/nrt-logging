@@ -1,4 +1,5 @@
-from nrt_logging.logger import logger_manager, NrtLogger
+from nrt_logging.logger import NrtLogger
+from nrt_logging.logger_manager import logger_manager
 from nrt_logging.logger_stream_handlers import \
     ConsoleStreamHandler, LogStyleEnum
 

@@ -3,7 +3,8 @@ from deepdiff import DeepDiff
 import yaml
 from nrt_logging.log_format import LogElementEnum
 from nrt_logging.log_level import LogLevelEnum
-from nrt_logging.logger import logger_manager, NrtLogger
+from nrt_logging.logger import NrtLogger
+from nrt_logging.logger_manager import logger_manager
 from nrt_logging.logger_stream_handlers import \
     ConsoleStreamHandler, ManualDepthEnum, \
     LoggerStreamHandlerBase, LogStyleEnum
@@ -77,10 +78,10 @@ class B:
         self.__logger.info(self.MSG_3)
 
 
-CA_A_LINE = 28
-CA_B_LINE = 32
-CB_A_LINE = 57
-CB_B_LINE = 62
+CA_A_LINE = 29
+CA_B_LINE = 33
+CB_A_LINE = 58
+CB_B_LINE = 63
 
 
 TEST_FILE_NAME = 'logger_yaml_style_test.py'
@@ -118,7 +119,7 @@ class NrtLoggerManagerTests(unittest.TestCase):
                 LogElementEnum.LOG_LEVEL.value: LogLevelEnum.INFO.name,
                 LogElementEnum.PATH.value: expected_path,
                 LogElementEnum.METHOD.value: expected_method_name,
-                LogElementEnum.LINE_NUMBER.value: 109,
+                LogElementEnum.LINE_NUMBER.value: 110,
                 LogElementEnum.MESSAGE.value: msg
             }
 
@@ -144,14 +145,14 @@ class NrtLoggerManagerTests(unittest.TestCase):
             LogElementEnum.LOG_LEVEL.value: LogLevelEnum.WARN.name,
             LogElementEnum.PATH.value: expected_path,
             LogElementEnum.METHOD.value: expected_method_name,
-            LogElementEnum.LINE_NUMBER.value: 133,
+            LogElementEnum.LINE_NUMBER.value: 134,
             LogElementEnum.MESSAGE.value: msg,
             'children': [
                 {
                     LogElementEnum.LOG_LEVEL.value: LogLevelEnum.ERROR.name,
                     LogElementEnum.PATH.value: expected_path,
                     LogElementEnum.METHOD.value: expected_method_name,
-                    LogElementEnum.LINE_NUMBER.value: 135,
+                    LogElementEnum.LINE_NUMBER.value: 136,
                     LogElementEnum.MESSAGE.value: child_msg
                 }
             ]
@@ -258,7 +259,7 @@ class NrtLoggerManagerTests(unittest.TestCase):
             LogElementEnum.LOG_LEVEL.value: LogLevelEnum.CRITICAL.name,
             LogElementEnum.PATH.value: f'{TEST_FILE_NAME}.B',
             LogElementEnum.METHOD.value: 'c_manual',
-            LogElementEnum.LINE_NUMBER.value: 66,
+            LogElementEnum.LINE_NUMBER.value: 67,
             LogElementEnum.MESSAGE.value: B.MSG_INCREASE,
             'children': [
                 {
@@ -282,7 +283,7 @@ class NrtLoggerManagerTests(unittest.TestCase):
                     LogElementEnum.LOG_LEVEL.value: LogLevelEnum.ERROR.name,
                     LogElementEnum.PATH.value: f'{TEST_FILE_NAME}.B',
                     LogElementEnum.METHOD.value: 'c_manual',
-                    LogElementEnum.LINE_NUMBER.value: 70,
+                    LogElementEnum.LINE_NUMBER.value: 71,
                     LogElementEnum.MESSAGE.value: B.MSG_INCREASE,
                 }
             ]
@@ -297,7 +298,7 @@ class NrtLoggerManagerTests(unittest.TestCase):
             LogElementEnum.LOG_LEVEL.value: LogLevelEnum.INFO.name,
             LogElementEnum.PATH.value: f'{TEST_FILE_NAME}.B',
             LogElementEnum.METHOD.value: 'c_manual',
-            LogElementEnum.LINE_NUMBER.value: 71,
+            LogElementEnum.LINE_NUMBER.value: 72,
             LogElementEnum.MESSAGE.value: B.MSG_DECREASE
         }
 
@@ -309,7 +310,7 @@ class NrtLoggerManagerTests(unittest.TestCase):
             LogElementEnum.LOG_LEVEL.value: LogLevelEnum.INFO.name,
             LogElementEnum.PATH.value: f'{TEST_FILE_NAME}.B',
             LogElementEnum.METHOD.value: 'c_manual',
-            LogElementEnum.LINE_NUMBER.value: 72,
+            LogElementEnum.LINE_NUMBER.value: 73,
             LogElementEnum.MESSAGE.value: B.MSG_DECREASE
         }
 
@@ -370,14 +371,14 @@ class NrtLoggerManagerTests(unittest.TestCase):
             LogElementEnum.LOG_LEVEL.value: LogLevelEnum.INFO.name,
             LogElementEnum.PATH.value: class_path,
             LogElementEnum.METHOD.value: method_name,
-            LogElementEnum.LINE_NUMBER.value: 348,
+            LogElementEnum.LINE_NUMBER.value: 349,
             LogElementEnum.MESSAGE.value: msg_1,
             'children': [
                 {
                     LogElementEnum.LOG_LEVEL.value: LogLevelEnum.ERROR.name,
                     LogElementEnum.PATH.value: class_path,
                     LogElementEnum.METHOD.value: method_name,
-                    LogElementEnum.LINE_NUMBER.value: 350,
+                    LogElementEnum.LINE_NUMBER.value: 351,
                     LogElementEnum.MESSAGE.value: msg_2,
                     'children': [
                         {
@@ -385,7 +386,7 @@ class NrtLoggerManagerTests(unittest.TestCase):
                                 LogLevelEnum.CRITICAL.name,
                             LogElementEnum.PATH.value: class_path,
                             LogElementEnum.METHOD.value: method_name,
-                            LogElementEnum.LINE_NUMBER.value: 352,
+                            LogElementEnum.LINE_NUMBER.value: 353,
                             LogElementEnum.MESSAGE.value: msg_1
                         }
                     ]
@@ -401,7 +402,7 @@ class NrtLoggerManagerTests(unittest.TestCase):
             LogElementEnum.LOG_LEVEL.value: LogLevelEnum.ERROR.name,
             LogElementEnum.PATH.value: class_path,
             LogElementEnum.METHOD.value: method_name,
-            LogElementEnum.LINE_NUMBER.value: 354,
+            LogElementEnum.LINE_NUMBER.value: 355,
             LogElementEnum.MESSAGE.value: msg_1
         }
 
@@ -427,14 +428,14 @@ class NrtLoggerManagerTests(unittest.TestCase):
             LogElementEnum.LOG_LEVEL.value: LogLevelEnum.CRITICAL.name,
             LogElementEnum.PATH.value: expected_path,
             LogElementEnum.METHOD.value: expected_method_name,
-            LogElementEnum.LINE_NUMBER.value: 416,
+            LogElementEnum.LINE_NUMBER.value: 417,
             LogElementEnum.MESSAGE.value: msg,
             'children': [
                 {
                     LogElementEnum.LOG_LEVEL.value: LogLevelEnum.ERROR.name,
                     LogElementEnum.PATH.value: expected_path,
                     LogElementEnum.METHOD.value: expected_method_name,
-                    LogElementEnum.LINE_NUMBER.value: 418,
+                    LogElementEnum.LINE_NUMBER.value: 419,
                     LogElementEnum.MESSAGE.value: child_msg
                 }
             ]

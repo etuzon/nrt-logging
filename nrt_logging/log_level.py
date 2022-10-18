@@ -36,5 +36,15 @@ class LogLevelEnum(Enum):
     def __lt__(self, other):
         return self.value < other.value
 
+    @classmethod
+    def build(cls, name: str):
+        name = name.upper()
+
+        for log_enum in LogLevelEnum:
+            if name == log_enum.name:
+                return log_enum
+
+        raise ValueError(f'[{name}] is not valid log level name')
+
 
 log_level: LogLevelEnum = LogLevelEnum.INFO

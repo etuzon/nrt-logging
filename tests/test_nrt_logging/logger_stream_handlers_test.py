@@ -4,7 +4,7 @@ import yaml
 
 from nrt_logging.log_format import LogFormat
 from nrt_logging.log_level import LogLevelEnum
-from nrt_logging.logger import logger_manager
+from nrt_logging.logger_manager import logger_manager
 from nrt_logging.logger_stream_handlers import \
     LogStyleEnum, FileStreamHandler, ManualDepthEnum
 from tests.test_nrt_logging.test_base import \

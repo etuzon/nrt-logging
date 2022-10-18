@@ -8,13 +8,44 @@ from enum import Enum
 from inspect import stack
 from typing import IO, Optional
 
-from nrt_logging.log_format import LogFormat, LogElementEnum
+from nrt_logging.log_format import LogElementEnum, LogDateFormat, LogYamlElements
 from nrt_logging.log_level import LogLevelEnum
 
 
+class StreamHandlerEnum(Enum):
+    CONSOLE = 'console'
+    FILE = 'file'
+
+
 class LogStyleEnum(Enum):
-    YAML = 1
-    LINE = 2
+    YAML = 'yaml', 1
+    LINE = 'line', 2
+
+    def __init__(self, name: str, value: str):
+        self.__name = name
+        self._value_ = value
+
+    @property
+    def name(self):
+        return self.__name
+
+    @classmethod
+    def build_by_name(cls, name: str):
+        name = name.lower()
+
+        for style_enum in LogStyleEnum:
+            if name == style_enum.name:
+                return style_enum
+
+        raise ValueError(f'[{name}] is not valid log style name')
+
+    @classmethod
+    def build_by_value(cls, value: int):
+        for style_enum in LogStyleEnum:
+            if value == style_enum.value:
+                return style_enum
+
+        raise ValueError(f'[{value}] is not valid log style value')
 
 
 class ManualDepthEnum(Enum):
@@ -47,7 +78,8 @@ class LoggerStreamHandlerBase(ABC):
         f' {LogElementEnum.MESSAGE.line_format}'
 
     _log_level: LogLevelEnum = None
-    _log_format: LogFormat = None
+    _log_date_format: LogDateFormat = None
+    _log_yaml_elements: LogYamlElements = None
 
     _stream: IO = None
 
@@ -61,11 +93,14 @@ class LoggerStreamHandlerBase(ABC):
 
     _log_line_template: str = LOG_LINE_DEFAULT_TEMPLATE
 
+    _is_debug: bool = False
+
     def __init__(self):
         if self._log_level is None:
             self._log_level = self.DEFAULT_LOG_LEVEL
 
-        self._log_format = LogFormat()
+        self._log_date_format = LogDateFormat()
+        self._log_yaml_elements = LogYamlElements()
         self._depth = 0
         self._depth_list = []
         self._increase_depth_list = []
@@ -158,12 +193,20 @@ class LoggerStreamHandlerBase(ABC):
         self._log_level = log_level
 
     @property
-    def log_format(self) -> LogFormat:
-        return self._log_format
+    def log_date_format(self) -> LogDateFormat:
+        return self._log_date_format
 
-    @log_format.setter
-    def log_format(self, log_format: LogFormat):
-        self._log_format = log_format
+    @log_date_format.setter
+    def log_date_format(self, log_date_format: LogDateFormat):
+        self._log_date_format = log_date_format
+
+    @property
+    def log_yaml_elements(self) -> LogYamlElements:
+        return self._log_yaml_elements
+
+    @log_yaml_elements.setter
+    def log_yaml_elements(self, log_yaml_elements: LogYamlElements):
+        self._log_yaml_elements = log_yaml_elements
 
     @property
     def log_line_template(self) -> str:
@@ -172,6 +215,14 @@ class LoggerStreamHandlerBase(ABC):
     @log_line_template.setter
     def log_line_template(self, log_line_template: str):
         self._log_line_template = log_line_template
+
+    @property
+    def is_debug(self) -> bool:
+        return self._is_debug
+
+    @is_debug.setter
+    def is_debug(self, is_debug: bool):
+        self._is_debug = is_debug
 
     def _log(
             self,
@@ -224,7 +275,7 @@ class LoggerStreamHandlerBase(ABC):
         elif self.log_style == LogStyleEnum.LINE:
             return self.__create_line_element_str(msg, log_level)
         else:
-            raise Exception('Bug: Unimplemented code')
+            raise NotImplemented('Bug: Not implemented code')
 
     def __create_log_str_on_depth_plus(
             self,
@@ -260,7 +311,7 @@ class LoggerStreamHandlerBase(ABC):
                 log_str = \
                     f'\n{self.YAML_SPACES_SEPARATOR}{depth_4_spaces}children:'
             else:
-                raise Exception('Bug: Unimplemented code')
+                raise NotImplemented('Bug: Not implemented code')
 
         elif self._depth == 0:
             if self.log_style == LogStyleEnum.YAML:
@@ -271,7 +322,7 @@ class LoggerStreamHandlerBase(ABC):
         elif self.log_style == LogStyleEnum.LINE:
             log_str += f'\n{self.__create_line_element_str(msg, log_level)}'
         else:
-            raise Exception('Bug: Unimplemented code')
+            raise NotImplemented('Bug: Not implemented code')
 
         return log_str
 
@@ -406,7 +457,7 @@ class LoggerStreamHandlerBase(ABC):
                     path, method,
                     line_number,
                     msg)
-                for yaml_element in self.log_format.yaml_elements
+                for yaml_element in self.log_yaml_elements.yaml_elements
             ])
 
     def __create_yaml_element(
@@ -444,7 +495,8 @@ class LoggerStreamHandlerBase(ABC):
                 '\n' \
                 f'{self.__create_yaml_line_message_element(msg, depth_spaces)}'
 
-        raise Exception(f'Bug: Yaml element {yaml_element} not implemented')
+        raise NotImplemented(
+            f'Bug: Yaml element {yaml_element} not implemented')
 
     def __create_line_element_str(
             self, msg: str, log_level: LogLevelEnum) -> str:
@@ -474,7 +526,7 @@ class LoggerStreamHandlerBase(ABC):
         log_line = self.log_line_template\
             .replace(
                 LogElementEnum.DATE.line_format,
-                datetime.now().strftime(self.log_format.date_format))\
+                datetime.now().strftime(self.log_date_format.date_format))\
             .replace(LogElementEnum.LOG_LEVEL.line_format, log_level.name)\
             .replace(LogElementEnum.PATH.line_format, path)\
             .replace(LogElementEnum.METHOD.line_format, method)\
@@ -497,7 +549,7 @@ class LoggerStreamHandlerBase(ABC):
     def __create_yaml_date_element(self, depth_spaces: str) -> str:
         return \
             f'{depth_spaces}{LogElementEnum.DATE.value}:' \
-            f' {datetime.now().strftime(self.log_format.date_format)}'
+            f' {datetime.now().strftime(self.log_date_format.date_format)}'
 
     def __update_depth_for_manual_increased_child_depth(self, fm_name: str):
         latest_fm_depth = self.get_latest_fm_depth(fm_name)
@@ -567,16 +619,20 @@ class LoggerStreamHandlerBase(ABC):
             f' {log_level}'
 
     @classmethod
-    def set_log_style(cls, log_style: LogStyleEnum):
-        cls._log_style = log_style
-
-    @classmethod
     def set_log_level(cls, level: LogLevelEnum):
         cls.__log_level = level
 
     @classmethod
-    def set_logger_format(cls, logger_format: LogFormat):
-        cls.__logger_format = logger_format
+    def set_log_style(cls, log_style: LogStyleEnum):
+        cls._log_style = log_style
+
+    @classmethod
+    def set_log_date_format(cls, log_date_format: LogDateFormat):
+        cls._log_date_format = log_date_format
+
+    @classmethod
+    def set_log_yaml_elements(cls, log_yaml_elements: LogYamlElements):
+        cls._log_yaml_elements = log_yaml_elements
 
     @classmethod
     def set_log_line_template(cls, log_line_template: str):

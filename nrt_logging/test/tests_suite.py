@@ -1,15 +1,11 @@
 import unittest
 from coverage import Coverage
 
-from projects.core.etuzon_io.logger import LogLevelEnum, init_logger
-
 
 class TestsSuite:
     CONFIG_FILE = ".coveragerc"
 
     is_tests_suite_run: bool = False
-    console_log_level: LogLevelEnum = LogLevelEnum.INFO
-    file_log_level: LogLevelEnum = LogLevelEnum.DEBUG
     log_file_path: str = None
 
     __coverage: Coverage = None
@@ -19,7 +15,6 @@ class TestsSuite:
         self.__coverage = Coverage(config_file=self.CONFIG_FILE)
         self.__is_coverage = is_coverage
         TestsSuite.is_tests_suite_run = True
-        init_logger(self.console_log_level, self.file_log_level)
 
     def run_tests(self):
         if self.__is_coverage:

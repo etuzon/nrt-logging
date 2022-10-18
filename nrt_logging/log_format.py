@@ -1,3 +1,4 @@
+from dataclasses import dataclass
 from enum import Enum
 
 
@@ -25,9 +26,26 @@ class LogElementEnum(Enum):
     def __str__(self):
         return self.value
 
+    @classmethod
+    def build(cls, name: str):
+        name = name.lower()
 
-class LogFormat:
+        for log_element_enum in LogElementEnum:
+            if name == log_element_enum.name:
+                return log_element_enum
+
+        raise ValueError(f'[{name}] is not valid log element name')
+
+
+@dataclass
+class LogDateFormat:
     DEFAULT_DATE_FORMAT = '%Y-%m-%d %H:%M:%S.%f'
+
+    date_format: str = DEFAULT_DATE_FORMAT
+
+
+@dataclass
+class LogYamlElements:
     DEFAULT_YAML_ELEMENTS = \
         (
             LogElementEnum.DATE,
@@ -38,30 +56,5 @@ class LogFormat:
             LogElementEnum.MESSAGE
         )
 
-    __date_format: str = DEFAULT_DATE_FORMAT
-    __yaml_elements: set[LogElementEnum] = \
+    yaml_elements: set[LogElementEnum] = \
         DEFAULT_YAML_ELEMENTS
-
-    @property
-    def date_format(self) -> str:
-        return self.__date_format
-
-    @date_format.setter
-    def date_format(self, date_format):
-        self.__date_format = date_format
-
-    @property
-    def yaml_elements(self) -> set[LogElementEnum]:
-        return self.__yaml_elements
-
-    @yaml_elements.setter
-    def yaml_elements(self, yaml_elements: set[LogElementEnum]):
-        self.__yaml_elements = yaml_elements
-
-    @classmethod
-    def set_date_format(cls, date_format: str):
-        cls.__date_format = date_format
-
-    @classmethod
-    def set_yaml_elements(cls, yaml_elements: set[LogElementEnum]):
-        cls.__yaml_elements = yaml_elements
