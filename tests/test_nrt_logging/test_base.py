@@ -1,3 +1,4 @@
+import os
 import sys
 import unittest
 from datetime import datetime
@@ -34,6 +35,7 @@ def is_date_in_format(date_str: str, date_format: str):
 
 
 class TestBase(unittest.TestCase):
+    TEMP_PATH = os.path.join(os.getcwd(), 'temp')
 
     def _verify_log_line(
             self,
@@ -47,20 +49,20 @@ class TestBase(unittest.TestCase):
 
         log_line_split = log_line.split(' ')
 
-        date_1 = log_line_split[0]
-        date_2 = log_line_split[1]
-        expected_date_list = expected_date_format.split(' ')
-        expected_date_format_1 = expected_date_list[0]
-        expected_date_format_2 = expected_date_list[1]
-        self.assertTrue(is_date_in_format(date_1, expected_date_format_1))
-        self.assertTrue(is_date_in_format(date_2, expected_date_format_2))
+        index = 0
 
-        self.assertEqual(log_line_split[2], f'[{expected_log_level.name}]')
+        expected_date_format_list = expected_date_format.split(' ')
+
+        for expected_date_format in expected_date_format_list:
+            date = log_line_split[index]
+            self.assertTrue(is_date_in_format(date, expected_date_format))
+            index += 1
+
+        self.assertEqual(f'[{expected_log_level.name}]', log_line_split[index])
 
         expected_code_location = \
             f'{expected_class_path}.{expected_method_name}' \
             f':{expected_line_number}'
 
-        self.assertEqual(log_line_split[3], f'[{expected_code_location}]')
-
-        self.assertEqual(log_line_split[4], expected_msg)
+        self.assertEqual(f'[{expected_code_location}]', log_line_split[index + 1])
+        self.assertEqual(expected_msg, log_line_split[index + 2])

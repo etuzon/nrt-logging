@@ -35,7 +35,7 @@ class A:
 
 def logging_line_style():
     sh = ConsoleStreamHandler()
-    sh.log_style = LogStyleEnum.LINE
+    sh.style = LogStyleEnum.LINE
     logger = logger_manager.get_logger(NAME_1)
     logger.add_stream_handler(sh)
     a = A()
@@ -44,7 +44,7 @@ def logging_line_style():
 
 def logging_yaml_style():
     sh = ConsoleStreamHandler()
-    sh.log_style = LogStyleEnum.YAML
+    sh.style = LogStyleEnum.YAML
     logger = logger_manager.get_logger(NAME_1)
     logger.add_stream_handler(sh)
     a = A()

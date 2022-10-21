@@ -1,55 +1,30 @@
 import unittest
 
-from nrt_logging.log_format import LogElementEnum, LogFormat
+from nrt_logging.log_format import LogElementEnum, LogYamlElements
 
 
 class LogElementEnumTests(unittest.TestCase):
     def test_name(self):
-        self.assertEqual(LogElementEnum.MESSAGE.name, 'message')
+        self.assertEqual('message', LogElementEnum.MESSAGE.name)
 
     def test_line_format(self):
-        self.assertEqual(LogElementEnum.DATE.line_format, '$date$')
+        self.assertEqual('$date$', LogElementEnum.DATE.line_format)
 
     def test_str(self):
-        self.assertEqual(str(LogElementEnum.MESSAGE), 'message')
+        self.assertEqual('message', str(LogElementEnum.MESSAGE))
 
 
-class LogFormatTests(unittest.TestCase):
-    UPDATED_DATE_FORMAT = '%Y-%m-%d'
+class LogYamlElementsTests(unittest.TestCase):
     UPDATED_YAML_ELEMENTS = {LogElementEnum.LOG_LEVEL, LogElementEnum.PATH}
 
-    def test_get_default_date_format(self):
-        self.assertEqual(
-            LogFormat().date_format, LogFormat.DEFAULT_DATE_FORMAT)
-
-    def test_set_date_format(self):
-        log_format = LogFormat()
-        log_format.date_format = self.UPDATED_DATE_FORMAT
-        self.assertEqual(log_format.date_format, self.UPDATED_DATE_FORMAT)
-        self.assertEqual(
-            LogFormat().date_format, LogFormat.DEFAULT_DATE_FORMAT)
-
-    def test_cls_set_date_format(self):
-        LogFormat.set_date_format(self.UPDATED_DATE_FORMAT)
-        self.assertEqual(LogFormat().date_format, self.UPDATED_DATE_FORMAT)
-        LogFormat.set_date_format(LogFormat.DEFAULT_DATE_FORMAT)
-        self.assertEqual(
-            LogFormat().date_format, LogFormat.DEFAULT_DATE_FORMAT)
-
     def test_set_yaml_elements(self):
-        log_format = LogFormat()
-        log_format.yaml_elements = self.UPDATED_YAML_ELEMENTS
-        self.assertEqual(log_format.yaml_elements, self.UPDATED_YAML_ELEMENTS)
+        log_yaml_elements = LogYamlElements()
+        log_yaml_elements.yaml_elements = self.UPDATED_YAML_ELEMENTS
         self.assertEqual(
-            LogFormat().yaml_elements, LogFormat.DEFAULT_YAML_ELEMENTS)
-
-    def test_cls_set_yaml_elements(self):
-        LogFormat.set_yaml_elements(self.UPDATED_YAML_ELEMENTS)
+            self.UPDATED_YAML_ELEMENTS, log_yaml_elements.yaml_elements)
         self.assertEqual(
-            LogFormat().yaml_elements, self.UPDATED_YAML_ELEMENTS)
-        LogFormat.set_yaml_elements(LogFormat.DEFAULT_YAML_ELEMENTS)
-        self.assertEqual(
-            LogFormat().yaml_elements, LogFormat.DEFAULT_YAML_ELEMENTS)
+            LogYamlElements.DEFAULT_YAML_ELEMENTS,
+            LogYamlElements().yaml_elements)
 
 
 if __name__ == '__main__':

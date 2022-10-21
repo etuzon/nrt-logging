@@ -5,7 +5,7 @@ from nrt_logging.logger_stream_handlers import ConsoleStreamHandler, LogStyleEnu
 
 sh = ConsoleStreamHandler()
 sh.log_level = LogLevelEnum.TRACE
-sh.log_style = LogStyleEnum.LINE
+sh.style = LogStyleEnum.LINE
 logger = logger_manager.get_logger('NAME_1')
 logger.add_stream_handler(sh)
 
