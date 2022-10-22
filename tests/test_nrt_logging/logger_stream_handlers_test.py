@@ -11,6 +11,27 @@ from tests.test_nrt_logging.test_base import \
     NAME_2, TestBase
 
 
+class LogStyleEnumTests(TestBase):
+
+    def test_name(self):
+        self.assertEqual('yaml', LogStyleEnum.YAML.name)
+
+    def test_build_by_name(self):
+        self.assertEqual(
+            LogStyleEnum.YAML, LogStyleEnum.build_by_name('YaMl'))
+
+    def test_build_by_name_not_exist_negative(self):
+        with self.assertRaises(ValueError):
+            LogStyleEnum.build_by_name('not exist')
+
+    def test_build_by_value(self):
+        self.assertEqual(LogStyleEnum.LINE, LogStyleEnum.build_by_value(2))
+
+    def test_build_by_value_not_exist_negative(self):
+        with self.assertRaises(ValueError):
+            LogStyleEnum.build_by_value(999)
+
+
 class FileStreamHandlerTests(TestBase):
     FILE_NAME = 'log_test.log'
     FILE_PATH = os.path.join(TestBase.TEMP_PATH, FILE_NAME)
@@ -63,7 +84,7 @@ class FileStreamHandlerTests(TestBase):
             LogLevelEnum.CRITICAL,
             expected_class_path,
             expected_method_name,
-            40,
+            61,
             msg_1)
 
         children = log_list[0].get('children')
@@ -76,7 +97,7 @@ class FileStreamHandlerTests(TestBase):
             LogLevelEnum.ERROR,
             expected_class_path,
             expected_method_name,
-            41,
+            62,
             child_1)
 
         self._verify_log_line(
@@ -85,7 +106,7 @@ class FileStreamHandlerTests(TestBase):
             LogLevelEnum.WARN,
             expected_class_path,
             expected_method_name,
-            42,
+            63,
             child_2)
 
         self._verify_log_line(
@@ -94,7 +115,7 @@ class FileStreamHandlerTests(TestBase):
             LogLevelEnum.INFO,
             expected_class_path,
             expected_method_name,
-            43,
+            64,
             child_1)
 
         self._verify_log_line(
@@ -103,7 +124,7 @@ class FileStreamHandlerTests(TestBase):
             LogLevelEnum.INFO,
             expected_class_path,
             expected_method_name,
-            45,
+            66,
             msg_2)
 
         children = log_list[2].get('children')
@@ -116,7 +137,7 @@ class FileStreamHandlerTests(TestBase):
             LogLevelEnum.ERROR,
             expected_class_path,
             expected_method_name,
-            47,
+            68,
             child_1)
 
         self._verify_log_line(
@@ -125,7 +146,7 @@ class FileStreamHandlerTests(TestBase):
             LogLevelEnum.INFO,
             expected_class_path,
             expected_method_name,
-            49,
+            70,
             msg_2)
 
 

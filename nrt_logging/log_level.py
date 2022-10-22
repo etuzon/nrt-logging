@@ -7,8 +7,7 @@ class LogLevelEnum(Enum):
     INFO = 'INFO', 30
     WARN = 'WARN', 40
     ERROR = 'ERROR', 50
-    FATAL = 'FATAL', 60
-    CRITICAL = 'CRITICAL', 70
+    CRITICAL = 'CRITICAL', 60
 
     def __init__(self, name: str, value: int):
         self.__name = name

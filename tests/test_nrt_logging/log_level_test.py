@@ -45,6 +45,10 @@ class LogLevelEnumTests(unittest.TestCase):
     def test_lt_negative(self):
         self.assertFalse(LogLevelEnum.INFO < LogLevelEnum.TRACE)
 
+    def test_log_level_not_exist_negative(self):
+        with self.assertRaises(ValueError):
+            LogLevelEnum.build('not exist')
+
 
 if __name__ == '__main__':
     unittest.main()

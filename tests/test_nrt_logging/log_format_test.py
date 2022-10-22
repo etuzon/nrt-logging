@@ -13,6 +13,10 @@ class LogElementEnumTests(unittest.TestCase):
     def test_str(self):
         self.assertEqual('message', str(LogElementEnum.MESSAGE))
 
+    def test_element_not_exist_negative(self):
+        with self.assertRaises(ValueError):
+            LogElementEnum.build('not exist')
+
 
 class LogYamlElementsTests(unittest.TestCase):
     UPDATED_YAML_ELEMENTS = {LogElementEnum.LOG_LEVEL, LogElementEnum.PATH}

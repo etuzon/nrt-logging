@@ -1,6 +1,6 @@
 [project]
 name='nrt-logging'
-version='1.0.1'
+version='1.1.0'
 authors=[
   { name='Eyal Tuzon', email='eyal.tuzon.dev@gmail.com' },
 ]
@@ -20,7 +20,7 @@ dynamic=['dependencies']
 [project.urls]
 'Homepage'='https://github.com/etuzon/Python-NRT-Logging'
 'Bug Tracker'='https://github.com/etuzon/Python-NRT-Logging/issues'
-
+'documentation'='https://github.com/etuzon/Python-NRT-Logging/wiki'
 [tool.setuptools]
 packages = ['nrt_logging']
 py-modules = []

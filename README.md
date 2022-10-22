@@ -1,126 +1,78 @@
-#Hierarchical logging in yaml format.
+# Hierarchical logging in yaml format.
 
-Hierarchical logging help to group logs that related to the same code flow.
+Hierarchical logging help to group logs that are related to the same code flow.
 
-Logging fields can be in Yaml format or in Line format.
+Log style can be styled in Yaml format or in Line format.
 
-In addition to automatic hierarchy, manually hierarchy is supported.
+### Examples:
 
-###Example:
+#### Output in YAML style
 
-Example of
-```
- - A.a1() - WARN
-   - B.child_1() - INFO
-     - B.child_2() - INFO
-```
-```
-from nrt_logging.logger import logger_manager, NrtLogger
+```Python
+from examples.demo_classes.demo_classes import NAME_1, A
+from nrt_logging.logger_manager import logger_manager
 from nrt_logging.logger_stream_handlers import \
     ConsoleStreamHandler, LogStyleEnum
 
-NAME_1 = 'name 1'
 
-
-class Child:
-    __logger: NrtLogger
-
-    def __init__(self):
-        self.__logger = logger_manager.get_logger(NAME_1)
-
-    def child_1(self):
-        self.__logger.info('Child 1')
-        self.child_2()
-
-    def child_2(self):
-        self.__logger.info('Child 2')
-
-
-class A:
-    __logger: NrtLogger
-    __child: Child
-
-    def __init__(self):
-        self.__logger = logger_manager.get_logger(NAME_1)
-        self.__child = Child()
-
-    def a1(self):
-        self.__logger.warn('Message 1')
-        self.__child.child_1()
-
-```
-
-## Init logger with LINE style
-
-```
 def logging_line_style():
     sh = ConsoleStreamHandler()
-    sh.log_style = LogStyleEnum.LINE
+    sh.style = LogStyleEnum.LINE
     logger = logger_manager.get_logger(NAME_1)
     logger.add_stream_handler(sh)
     a = A()
     a.a1()
- 
-logging_line_style()
-```
 
-### Output
 
-- log: 2022-10-13 00:22:57.676415 [WARN] [test_line_style.py.A.a1:29] Message 1
-  children:
-    - log: 2022-10-13 00:22:57.688419 [INFO] [test_line_style.py.Child.child_1:13] Child 1
-      children:
-        - log: 2022-10-13 00:22:57.700451 [INFO] [test_line_style.py.Child.child_2:17] Child 2
-        
-## Init logger with YAML style
-
-```
 def logging_yaml_style():
     sh = ConsoleStreamHandler()
-    sh.log_style = LogStyleEnum.YAML
+    sh.style = LogStyleEnum.YAML
     logger = logger_manager.get_logger(NAME_1)
     logger.add_stream_handler(sh)
     a = A()
     a.a1()
+
 
 logging_yaml_style()
 ```
 
-### Output
-```
+Output
+```YAML
 ---
-date: 2022-10-13 00:29:52.548451
+date: 2022-10-21 21:20:49.658272
 log_level: WARN
-path: test_line_style.py.A
+path: demo_classes.py.A
 method: a1
-line_number: 31
+line_number: 32
 message: Message 1
 children:
-  - date: 2022-10-13 00:29:52.558965
+  - date: 2022-10-21 21:20:49.666366
     log_level: INFO
-    path: test_line_style.py.Child
+    path: demo_classes.py.Child
     method: child_1
-    line_number: 15
+    line_number: 16
     message: Child 1
     children:
-      - date: 2022-10-13 00:29:52.569975
+      - date: 2022-10-21 21:20:49.675316
         log_level: INFO
-        path: test_line_style.py.Child
+        path: demo_classes.py.Child
         method: child_2
-        line_number: 19
+        line_number: 20
         message: Child 2
-```   
-## Example of changing hierarchy manually
-
 ```
+
+#### Output in LINE style
+
+```Python
 from nrt_logging.log_level import LogLevelEnum
-from nrt_logging.logger import logger_manager
-from nrt_logging.logger_stream_handlers import ConsoleStreamHandler, LogStyleEnum
+from nrt_logging.logger_manager import logger_manager
+from nrt_logging.logger_stream_handlers import \
+    ConsoleStreamHandler, LogStyleEnum
 
 
 sh = ConsoleStreamHandler()
 sh.log_level = LogLevelEnum.TRACE
-sh.log_style = LogStyleEnum.LINE
+sh.style = LogStyleEnum.LINE
 logger = logger_manager.get_logger('NAME_1')
 logger.add_stream_handler(sh)
 
@@ -135,13 +87,61 @@ logger.decrease_depth()
 logger.info('continue main level')
 ```
 
-### Output:
-```
-- log: 2022-10-13 00:35:43.310527 [INFO] [test_manual_hierarchy_logging.py.<module>:12] main level log
+Output
+```YAML
+- log: 2022-10-21 21:30:16.361425 [INFO] [manual_hierarchy_line_logging.py.<module>:13] main level log
   children:
-    - log: 2022-10-13 00:35:43.318527 [INFO] [test_manual_hierarchy_logging.py.<module>:14] child 1
+    - log: 2022-10-21 21:30:16.367386 [INFO] [manual_hierarchy_line_logging.py.<module>:15] child 1
       children:
-        - log: 2022-10-13 00:35:43.325527 [INFO] [test_manual_hierarchy_logging.py.<module>:16] child 1_1
-    - log: 2022-10-13 00:35:43.333531 [INFO] [test_manual_hierarchy_logging.py.<module>:18] child 2
-- log: 2022-10-13 00:35:43.341532 [INFO] [test_manual_hierarchy_logging.py.<module>:20] continue main level
+        - log: 2022-10-21 21:30:16.373975 [INFO] [manual_hierarchy_line_logging.py.<module>:17] child 1_1
+    - log: 2022-10-21 21:30:16.380979 [INFO] [manual_hierarchy_line_logging.py.<module>:19] child 2
+- log: 2022-10-21 21:30:16.387013 [INFO] [manual_hierarchy_line_logging.py.<module>:21] continue main level
 ```
+
+### Config file
+
+log_manager config file in YAML style.<br>
+Configure loggers and stream handlers.
+
+parameters are inherited. Parameters that are deeper in YAML file will be taken.
+
+```YAML
+log_level: WARN
+date_format: '%Y-%m-%d %H:%M:%S'
+loggers:
+  - name: TEST1
+    style: yaml
+    log_line_template: '[$log_level$] <$date$> $message$'
+    stream_handlers:
+      - type: console
+        style: line
+      - type: file
+        file_path: logs/log_test_1.txt
+        log_level: DEBUG
+        style: line
+        date_format: '%Y'
+        log_line_template: 'Test1 $date$ $message$'
+  - name: TEST2
+    style: yaml
+    stream_handlers:
+      - type: file
+        file_path: logs/log_test_2.txt
+        log_level: ERROR
+        date_format: '%Y'
+        log_yaml_elements:
+          ['log_level', 'date', 'message']
+```
+
+```Python
+from examples.demo_classes.demo_classes import \
+    NAME_1, A, NAME_2
+from nrt_logging.logger_manager import logger_manager
+from nrt_logging.logger_stream_handlers import ManualDepthEnum
+
+CONFIG_FILE_PATH = './config/config1.yaml'
+
+logger_manager.set_config(file_path=CONFIG_FILE_PATH)
+```
+
+Wiki: https://github.com/etuzon/Python-NRT-Logging/wiki/NRT-Logging
+

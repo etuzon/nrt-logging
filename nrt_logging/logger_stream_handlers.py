@@ -8,7 +8,8 @@ from enum import Enum
 from inspect import stack
 from typing import IO, Optional
 
-from nrt_logging.log_format import LogElementEnum, LogDateFormat, LogYamlElements
+from nrt_logging.log_format import \
+    LogElementEnum, LogDateFormat, LogYamlElements
 from nrt_logging.log_level import LogLevelEnum
 
 
@@ -321,7 +322,7 @@ class LoggerStreamHandlerBase(ABC):
 
         elif self._depth == 0:
             if self.style == LogStyleEnum.YAML:
-                log_str = f'\n{self.YAML_DOCUMENT_SEPARATOR}'
+                log_str = f'{self.YAML_DOCUMENT_SEPARATOR}'
 
         if self.style == LogStyleEnum.YAML:
             log_str += \
