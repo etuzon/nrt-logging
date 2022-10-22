@@ -1,0 +1,4 @@
+- log: 2022-10-22 11:59:10.368002 [ERROR] [demo_classes.py.A.a2_manual:41] Error Test 123
+  children:
+    - log: 2022-10-22 11:59:10.390593 [WARN] [demo_classes.py.A.a1:32] Message 1
+    - log: 2022-10-22 11:59:10.436596 [WARN] [demo_classes.py.A.a1:32] Message 1

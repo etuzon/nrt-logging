@@ -1,0 +1,13 @@
+log_level: WARN
+loggers:
+  - name: TEST1
+    style: yaml
+    stream_handlers:
+      - type: file
+        style: line
+        file_path: logs/log_test_3.txt
+      - type: file
+        file_path: logs/log_test_4.txt
+        log_level: DEBUG
+        style: yaml
+

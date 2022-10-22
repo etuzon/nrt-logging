@@ -1,0 +1,16 @@
+- log: Test1 2022 Test 123
+  children:
+    - log: Test1 2022 Increase Test 123
+- log: Test1 2022 Decrease Test 123
+- log: Test1 2022 Error Test 123
+  children:
+    - log: Test1 2022 Message 1
+      children:
+        - log: Test1 2022 Child 1
+          children:
+            - log: Test1 2022 Child 2
+    - log: Test1 2022 Message 1
+      children:
+        - log: Test1 2022 Child 1
+          children:
+            - log: Test1 2022 Child 2

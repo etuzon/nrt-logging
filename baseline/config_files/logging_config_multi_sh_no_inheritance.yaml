@@ -1,0 +1,14 @@
+loggers:
+  - name: TEST1
+    stream_handlers:
+      - type: console
+        log_level: INFO
+        style: line
+        date_format: '%Y-%m'
+        log_line_template: 'Test $date$ $message$'
+      - type: file
+        file_path: temp/log_test_1.txt
+        log_level: DEBUG
+        style: line
+        date_format: '%Y'
+        log_line_template: 'Test $date$ $message$'

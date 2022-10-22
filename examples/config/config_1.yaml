@@ -1,0 +1,24 @@
+log_level: WARN
+date_format: '%Y-%m-%d %H:%M:%S'
+loggers:
+  - name: TEST1
+    style: yaml
+    log_line_template: '[$log_level$] <$date$> $message$'
+    stream_handlers:
+      - type: console
+        style: line
+      - type: file
+        file_path: logs/log_test_1.txt
+        log_level: DEBUG
+        style: line
+        date_format: '%Y'
+        log_line_template: 'Test1 $date$ $message$'
+  - name: TEST2
+    style: yaml
+    stream_handlers:
+      - type: file
+        file_path: logs/log_test_2.txt
+        log_level: ERROR
+        date_format: '%Y'
+        log_yaml_elements:
+          ['log_level', 'date', 'message']
