@@ -1,6 +1,6 @@
 from nrt_logging.logger import NrtLogger
 from nrt_logging.logger_manager import logger_manager
-
+from nrt_logging.logger_stream_handlers import ManualDepthEnum
 
 NAME_1 = 'TEST1'
 NAME_2 = 'TEST2'
@@ -40,3 +40,17 @@ class A:
         self.__logger.info('Decrease Test 123')
         self.__logger.error('Error Test 123')
         self.a1()
+
+    def a3_manual(self):
+        self.__logger.info('Test 123')
+        self.__logger.increase_depth()
+        self.__logger.info('Increase Test 123')
+        self.__logger.decrease_depth()
+        self.__logger.info('Decrease Test 123')
+        self.__logger.error('Error Test 123')
+
+    def a4_manual(self):
+        self.__logger.info('Test 123')
+        self.__logger.info('Increase Test 123', ManualDepthEnum.INCREASE)
+        self.__logger.info('Decrease Test 123', ManualDepthEnum.DECREASE)
+        self.__logger.error('Error Test 123')

@@ -1,6 +1,6 @@
 [project]
 name='nrt-logging'
-version='1.1.0'
+version='1.1.1'
 authors=[
   { name='Eyal Tuzon', email='eyal.tuzon.dev@gmail.com' },
 ]
