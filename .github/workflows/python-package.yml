@@ -43,5 +43,5 @@ jobs:
     - name: Upload coverage reports to Codecov with GitHub Action
       uses: codecov/codecov-action@v3.1.1
       with:
-        directory: ./coverage_report
+        path_to_write_report: ./coverage_report/report.json
 
