@@ -43,5 +43,7 @@ jobs:
     - name: Coveralls
       uses: coverallsapp/github-action@master
       with:
+        base-path: nrt_logging
+        path-to-lcov: ./coverage_report/lcov.info
         github-token: ${{ secrets.GITHUB_TOKEN }}
 
