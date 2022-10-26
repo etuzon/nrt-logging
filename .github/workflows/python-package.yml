@@ -40,9 +40,8 @@ jobs:
     - name: Test with unittest
       run: |
         python tests_execution.py
-    - name: Upload coverage reports to Codecov with GitHub Action
-      uses: codecov/codecov-action@v3.1.1
+    - name: Coveralls
+      uses: coverallsapp/github-action@main
       with:
-        verbose: true
-        path_to_write_report: ./coverage_report/report.json
+        github-token: ${{ secrets.GITHUB_TOKEN }}
 
