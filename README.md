@@ -1,5 +1,12 @@
 # Hierarchical logging in yaml format.
 
+![PyPI](https://img.shields.io/pypi/v/nrt-logging?color=orange&style=plastic)
+![PyPI - Python Version](https://img.shields.io/pypi/pyversions/nrt-logging?color=brown&style=plastic)
+![PyPI - License](https://img.shields.io/pypi/l/nrt-logging?color=blue&style=plastic)
+![PyPI - Downloads](https://img.shields.io/pypi/dm/nrt-logging?color=greenstyle=plastic)
+![GitHub code size in bytes](https://img.shields.io/github/languages/code-size/etuzon/python-nrt-logging?style=plastic)
+![GitHub last commit](https://img.shields.io/github/last-commit/etuzon/python-nrt-logging)
+
 Hierarchical logging help to group logs that are related to the same code flow.
 
 Log style can be styled in Yaml format or in Line format.
