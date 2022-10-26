@@ -37,6 +37,6 @@ jobs:
         flake8 . --count --exit-zero --max-complexity=10 --max-line-length=127 --statistics
     - name: Test with unittest
       run: |
-          python tests_execution.py
+        python -m unittest discover -s ./tests -p '*_test.py'
     - name: Upload coverage reports to Codecov with GitHub Action
       uses: codecov/codecov-action@v3
