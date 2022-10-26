@@ -45,7 +45,7 @@ jobs:
       run: |
         python tests_execution.py
     - name: Run Coveralls
-    - run: |
+      run: |
         coveralls --service=github
       env:
         GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
