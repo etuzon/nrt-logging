@@ -1,17 +1,15 @@
 import os
-
-from pip._internal.network.session import PipSession
-from pip._internal.req import parse_requirements
 from setuptools import setup
 import nrt_logging
 
+
 PATH = os.path.dirname(__file__)
 
-requirements = parse_requirements('requirements.txt', session=PipSession())
+with open(os.path.join(PATH, 'requirements.txt')) as f:
+    requirements = f.read().splitlines()
 
 with open(os.path.join(PATH, 'README.md')) as f:
     readme = f.read()
-
 
 setup(
     name='nrt-logging',
@@ -26,9 +24,11 @@ setup(
     packages=['nrt_logging'],
     classifiers=[
         'Programming Language :: Python :: 3',
+        'Programming Language :: Python :: 3.9',
         'Programming Language :: Python :: 3.10',
         'License :: OSI Approved :: GNU General Public License v3 or later (GPLv3+)',
         'Operating System :: OS Independent',
     ],
-    install_requires=[str(requirement.requirement) for requirement in requirements]
+    install_requires=[requirements],
+    data_files=[('', ['requirements.txt'])],
 )
