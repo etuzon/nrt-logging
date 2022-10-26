@@ -1,6 +1,6 @@
 # Hierarchical logging in yaml format.
 
-![PyPI](https://img.shields.io/pypi/v/nrt-logging?color=orange&style=plastic)
+![PyPI](https://img.shields.io/pypi/v/nrt-logging?color=blueviolet&style=plastic)
 ![PyPI - Python Version](https://img.shields.io/pypi/pyversions/nrt-logging?color=brown&style=plastic)
 ![PyPI - License](https://img.shields.io/pypi/l/nrt-logging?color=blue&style=plastic)
 ![PyPI - Downloads](https://img.shields.io/pypi/dm/nrt-logging?color=greenstyle=plastic)
