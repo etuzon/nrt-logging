@@ -29,6 +29,7 @@ jobs:
         python -m pip install --upgrade pip
         python -m pip install deepdiff
         python -m pip install coverage
+        python -m pip install coveralls
         python -m pip install flake8
         if [ -f requirements.txt ]; then pip install -r requirements.txt; fi
     - name: Lint with flake8
@@ -37,10 +38,19 @@ jobs:
         flake8 . --count --select=E9,F63,F7,F82 --show-source --statistics
         # exit-zero treats all errors as warnings. The GitHub editor is 127 chars wide
         flake8 . --count --exit-zero --max-complexity=10 --max-line-length=127 --statistics
+  test:
+    runs-on: ubuntu-latest
+    steps:
     - name: Test with unittest
       run: |
         python tests_execution.py
-    - name: Coveralls
+    - name: Run Coveralls
+    - run: |
+        coveralls --service=github
+      env:
+        GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        COVERALLS_FLAG_NAME: ${{ matrix.test-name }}
+    - name: Upload Coveralls report
       uses: coverallsapp/github-action@master
       with:
         base-path: nrt_logging
