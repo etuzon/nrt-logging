@@ -41,6 +41,7 @@ jobs:
       run: |
         python tests_execution.py
     - name: Upload coverage reports to Codecov with GitHub Action
-      uses: codecov/codecov-action@v3
+      uses: codecov/codecov-action@v3.1.1
       with:
-        path_to_write_report: ./coverage_report/report.json
+        directory: ./coverage_report
+
