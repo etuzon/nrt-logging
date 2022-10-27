@@ -23,6 +23,8 @@ def __replace_pyproject_version():
             f.write('\n'.join(file_lines))
 
 
+##################################################################
+
 __replace_pyproject_version()
 
 test_suite = TestsSuite(True)

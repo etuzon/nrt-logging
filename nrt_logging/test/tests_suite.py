@@ -1,5 +1,5 @@
 import unittest
-from coverage import Coverage
+from coverage import Coverage, CoverageData
 
 
 class TestsSuite:
@@ -30,6 +30,7 @@ class TestsSuite:
     def create_report(self):
         self.__coverage.report()
         self.__coverage.json_report()
+        self.__coverage.lcov_report()
         self.__coverage.html_report()
 
     def erase_data(self):

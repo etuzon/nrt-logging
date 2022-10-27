@@ -23,3 +23,6 @@ directory = coverage_report/html
 [json]
 output = coverage_report/report.json
 pretty_print = true
+
+[lcov]
+output = coverage_report/coverage.lcov
