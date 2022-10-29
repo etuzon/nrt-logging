@@ -18,7 +18,72 @@ Log style can be styled in Yaml format or in Line format.
 #### Output in YAML style
 
 ```Python
-from examples.demo_classes.demo_classes import NAME_1, A
+from nrt_logging.logger import NrtLogger
+from nrt_logging.logger_manager import logger_manager
+from nrt_logging.logger_stream_handlers import ManualDepthEnum
+
+NAME_1 = 'TEST1'
+NAME_2 = 'TEST2'
+
+
+class Child:
+    __logger: NrtLogger
+
+    def __init__(self):
+        self.__logger = logger_manager.get_logger(NAME_1)
+
+    def child_1(self):
+        self.__logger.info('Child 1')
+        self.child_2()
+
+    def child_2(self):
+        self.__logger.info('Child 2')
+
+
+class Parent:
+    MSG_1 = 'MSG_1'
+    MSG_2 = 'MSG_2'
+    MSG_3 = 'MSG_3'
+    INCREASE_MSG = 'INCREASE_MSG'
+    DECREASE_MSG = 'DECREASE_MSG'
+
+    __logger: NrtLogger
+    __child: Child
+
+    def __init__(self):
+        self.__logger = logger_manager.get_logger(NAME_1)
+        self.__child = Child()
+
+    def a1(self):
+        self.__logger.warn(self.MSG_1)
+        self.__child.child_1()
+
+    def a2_manual(self):
+        self.__logger.info(self.MSG_2)
+        self.__logger.increase_depth()
+        self.__logger.info(self.INCREASE_MSG)
+        self.__logger.decrease_depth()
+        self.__logger.info(self.DECREASE_MSG)
+        self.__logger.error(self.MSG_1)
+        self.a1()
+
+    def a3_manual(self):
+        self.__logger.info(self.MSG_2)
+        self.__logger.increase_depth()
+        self.__logger.info(self.INCREASE_MSG)
+        self.__logger.decrease_depth()
+        self.__logger.info(self.DECREASE_MSG)
+        self.__logger.error(self.MSG_3)
+
+    def a4_manual(self):
+        self.__logger.info(self.MSG_1)
+        self.__logger.info(self.INCREASE_MSG, ManualDepthEnum.INCREASE)
+        self.__logger.info(self.DECREASE_MSG, ManualDepthEnum.DECREASE)
+        self.__logger.error(self.MSG_2)
+```
+
+```Python
+from examples.demo_classes.demo_classes import NAME_1, Parent
 from nrt_logging.logger_manager import logger_manager
 from nrt_logging.logger_stream_handlers import \
     ConsoleStreamHandler, LogStyleEnum
@@ -29,8 +94,8 @@ def logging_line_style():
     sh.style = LogStyleEnum.LINE
     logger = logger_manager.get_logger(NAME_1)
     logger.add_stream_handler(sh)
-    a = A()
-    a.a1()
+    p = Parent()
+    p.a1()
 
 
 def logging_yaml_style():
@@ -38,8 +103,8 @@ def logging_yaml_style():
     sh.style = LogStyleEnum.YAML
     logger = logger_manager.get_logger(NAME_1)
     logger.add_stream_handler(sh)
-    a = A()
-    a.a1()
+    p = Parent()
+    p.a1()
 
 
 logging_yaml_style()
@@ -48,21 +113,21 @@ logging_yaml_style()
 Output
 ```YAML
 ---
-date: 2022-10-21 21:20:49.658272
+date: 2022-10-29 22:05:08.967576
 log_level: WARN
-path: demo_classes.py.A
+path: demo_classes.py.Parent
 method: a1
-line_number: 32
-message: Message 1
+line_number: 38
+message: MSG_1
 children:
-  - date: 2022-10-21 21:20:49.666366
+  - date: 2022-10-29 22:05:08.968573
     log_level: INFO
     path: demo_classes.py.Child
     method: child_1
     line_number: 16
     message: Child 1
     children:
-      - date: 2022-10-21 21:20:49.675316
+      - date: 2022-10-29 22:05:08.970566
         log_level: INFO
         path: demo_classes.py.Child
         method: child_2
@@ -98,13 +163,13 @@ logger.info('continue main level')
 
 Output
 ```YAML
-- log: 2022-10-21 21:30:16.361425 [INFO] [manual_hierarchy_line_logging.py.<module>:13] main level log
+- log: 2022-10-29 22:06:23.325037 [INFO] [manual_hierarchy_line_logging_1.py.<module>:13] main level log
   children:
-    - log: 2022-10-21 21:30:16.367386 [INFO] [manual_hierarchy_line_logging.py.<module>:15] child 1
+    - log: 2022-10-29 22:06:23.326033 [INFO] [manual_hierarchy_line_logging_1.py.<module>:15] child 1
       children:
-        - log: 2022-10-21 21:30:16.373975 [INFO] [manual_hierarchy_line_logging.py.<module>:17] child 1_1
-    - log: 2022-10-21 21:30:16.380979 [INFO] [manual_hierarchy_line_logging.py.<module>:19] child 2
-- log: 2022-10-21 21:30:16.387013 [INFO] [manual_hierarchy_line_logging.py.<module>:21] continue main level
+        - log: 2022-10-29 22:06:23.327030 [INFO] [manual_hierarchy_line_logging_1.py.<module>:17] child 1_1
+- log: 2022-10-29 22:06:23.328027 [INFO] [manual_hierarchy_line_logging_1.py.<module>:19] child 2
+- log: 2022-10-29 22:06:23.330020 [INFO] [manual_hierarchy_line_logging_1.py.<module>:21] continue main level
 ```
 
 ### Config file

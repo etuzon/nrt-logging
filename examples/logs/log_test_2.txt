@@ -1,34 +1,19 @@
 ---
-date: 2022
-log_level: ERROR
-path: config_logger_1.py
-method: <module>
-line_number: 14
 message: Test 1234567
+date: 2022
+log_level: ERROR
 children:
-  - date: 2022
+  - message: Child 1
+    date: 2022
     log_level: CRITICAL
-    path: config_logger_1.py
-    method: <module>
-    line_number: 15
-    message: Child 1
-  - date: 2022
+  - message: Child 2
+    date: 2022
     log_level: ERROR
-    path: config_logger_1.py
-    method: <module>
-    line_number: 16
-    message: Child 2
 ---
-date: 2022
-log_level: ERROR
-path: config_logger_1.py
-method: <module>
-line_number: 17
 message: Child 1
----
 date: 2022
 log_level: ERROR
-path: config_logger_1.py
-method: <module>
-line_number: 19
+---
 message: Test Test 2
+date: 2022
+log_level: ERROR

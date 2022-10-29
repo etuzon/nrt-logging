@@ -1,67 +1,67 @@
 ---
-date: 2022-10-22 11:59:10.325001
+date: 2022-10-29 22:02:22.251813
 log_level: INFO
-path: demo_classes.py.A
+path: demo_classes.py.Parent
 method: a2_manual
-line_number: 36
-message: Test 123
+line_number: 42
+message: MSG_2
 children:
-  - date: 2022-10-22 11:59:10.337999
+  - date: 2022-10-29 22:02:22.254805
     log_level: INFO
-    path: demo_classes.py.A
+    path: demo_classes.py.Parent
     method: a2_manual
-    line_number: 38
-    message: Increase Test 123
+    line_number: 44
+    message: INCREASE_MSG
 ---
-date: 2022-10-22 11:59:10.352069
+date: 2022-10-29 22:02:22.257501
 log_level: INFO
-path: demo_classes.py.A
+path: demo_classes.py.Parent
 method: a2_manual
-line_number: 40
-message: Decrease Test 123
+line_number: 46
+message: DECREASE_MSG
 ---
-date: 2022-10-22 11:59:10.380001
+date: 2022-10-29 22:02:22.260561
 log_level: ERROR
-path: demo_classes.py.A
+path: demo_classes.py.Parent
 method: a2_manual
-line_number: 41
-message: Error Test 123
+line_number: 47
+message: MSG_1
 children:
-  - date: 2022-10-22 11:59:10.401694
+  - date: 2022-10-29 22:02:22.263685
     log_level: WARN
-    path: demo_classes.py.A
+    path: demo_classes.py.Parent
     method: a1
-    line_number: 32
-    message: Message 1
+    line_number: 38
+    message: MSG_1
     children:
-      - date: 2022-10-22 11:59:10.413597
+      - date: 2022-10-29 22:02:22.266674
         log_level: INFO
         path: demo_classes.py.Child
         method: child_1
         line_number: 16
         message: Child 1
         children:
-          - date: 2022-10-22 11:59:10.426594
+          - date: 2022-10-29 22:02:22.268813
             log_level: INFO
             path: demo_classes.py.Child
             method: child_2
             line_number: 20
             message: Child 2
-  - date: 2022-10-22 11:59:10.445595
+  - date: 2022-10-29 22:02:22.271803
     log_level: WARN
-    path: demo_classes.py.A
+    path: demo_classes.py.Parent
     method: a1
-    line_number: 32
-    message: Message 1
+    line_number: 38
+    message: MSG_1
     children:
-      - date: 2022-10-22 11:59:10.455596
+      - date: 2022-10-29 22:02:22.272868
         log_level: INFO
         path: demo_classes.py.Child
         method: child_1
         line_number: 16
         message: Child 1
         children:
-          - date: 2022-10-22 11:59:10.467597
+          - date: 2022-10-29 22:02:22.274932
             log_level: INFO
             path: demo_classes.py.Child
             method: child_2
