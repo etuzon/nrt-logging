@@ -1,5 +1,7 @@
+from typing import Optional
+
 import yaml
-from schema import Schema, SchemaError, Optional
+import schema
 from nrt_logging.log_format import LogElementEnum
 from nrt_logging.log_level import LogLevelEnum
 from nrt_logging.logger_stream_handlers import \
@@ -15,13 +17,13 @@ class ConfigBase:
     LOG_LINE_TEMPLATE = 'log_line_template'
     LOG_YAML_ELEMENTS = 'log_yaml_elements'
 
-    _log_level: LogLevelEnum = None
-    _style: LogStyleEnum = None
-    _date_format: str = None
-    _log_line_template: str = None
-    _log_element_list: list[LogElementEnum] = None
+    _log_level: Optional[LogLevelEnum] = None
+    _style: Optional[LogStyleEnum] = None
+    _date_format: Optional[str] = None
+    _log_line_template: Optional[str] = None
+    _log_yaml_elements: Optional[list[LogElementEnum]] = None
 
-    _config: dict = None
+    _config: Optional[dict] = None
 
     _is_debug: bool = False
 
@@ -50,20 +52,20 @@ class ConfigBase:
         return self._log_line_template
 
     @property
-    def log_element_list(self) -> list[LogElementEnum]:
-        return self._log_element_list
+    def log_yaml_elements(self) -> Optional[list[LogElementEnum]]:
+        return self._log_yaml_elements
 
     @property
     def is_debug(self) -> bool:
         return self._is_debug
 
     def _update_is_debug(self, is_parent_debug: bool):
-        is_debug = bool(self._config.get(self.DEBUG))
+        is_debug = self._config.get(self.DEBUG)
 
         if is_debug is None:
             is_debug = is_parent_debug
 
-        self.__is_debug = is_debug
+        self._is_debug = bool(is_debug)
 
     def _update_log_level(self):
         log_level_str = self._config.get(self.LOG_LEVEL)
@@ -108,15 +110,15 @@ class ConfigBase:
                         f'Element [{log_element_str}]'
                         f' is not valid YAML log element name')
 
-            self._log_element_list = log_element_enum_list
+            self._log_yaml_elements = log_element_enum_list
 
 
 class StreamHandlerConfig(ConfigBase):
     TYPE = 'type'
     FILE_PATH = 'file_path'
 
-    __type: StreamHandlerEnum = None
-    __file_path: str = None
+    __type: Optional[StreamHandlerEnum] = None
+    __file_path: Optional[str] = None
 
     def __init__(self, config: dict, is_parent_debug: bool):
         super().__init__(config, is_parent_debug)
@@ -172,8 +174,8 @@ class LoggerConfig(ConfigBase):
     LOGGER_NAME = 'name'
     STREAM_HANDLERS = 'stream_handlers'
 
-    __name: str = None
-    __stream_handler_list: list[StreamHandlerConfig] = None
+    __name: Optional[str] = None
+    __stream_handler_list: Optional[list[StreamHandlerConfig]] = None
 
     __is_debug: bool = False
 
@@ -198,18 +200,8 @@ class LoggerConfig(ConfigBase):
     def __update_logger_name(self):
         self.__name = self._config.get(self.LOGGER_NAME)
 
-        if not self.name:
-            raise ValueError(
-                'Logger in log config not contain name.\n'
-                f'Log config:\n{self._config}')
-
     def __update_stream_handlers(self):
         stream_handlers_list = self._config.get(self.STREAM_HANDLERS)
-
-        if not stream_handlers_list:
-            raise ValueError(
-                f'{self.STREAM_HANDLERS} not exist in Logger '
-                f'[{self.name}] in logger config')
 
         if self.__stream_handler_list is None:
             self.__stream_handler_list = []
@@ -222,7 +214,7 @@ class LoggerConfig(ConfigBase):
 class LoggerManagerConfig(ConfigBase):
     LOGGERS_CONFIG = 'loggers'
 
-    __loggers_config: dict[str, LoggerConfig] = None
+    __loggers_config: Optional[dict[str, LoggerConfig]] = None
 
     def __init__(self, file_path: str = None, config: dict = None):
         self.__validate_input_parameters(file_path, config)
@@ -237,10 +229,6 @@ class LoggerManagerConfig(ConfigBase):
         return self.__loggers_config
 
     def __update_loggers_config(self):
-        if self.__loggers_config:
-            raise ValueError(
-                f'[{self.LOGGERS_CONFIG}]'
-                ' is configured multiple times in log config')
 
         self.__loggers_config = {}
 
@@ -281,41 +269,43 @@ class LoggerManagerConfig(ConfigBase):
     def __validate_schema(cls, config: dict):
         template = \
             {
-                Optional(cls.DEBUG): bool,
-                Optional(cls.LOG_LEVEL): str,
-                Optional(cls.STYLE): str,
-                Optional(cls.DATE_FORMAT): str,
-                Optional(cls.LOG_LINE_TEMPLATE): str,
-                Optional(cls.LOG_YAML_ELEMENTS): list,
+                schema.Optional(cls.DEBUG): bool,
+                schema.Optional(cls.LOG_LEVEL): str,
+                schema.Optional(cls.STYLE): str,
+                schema.Optional(cls.DATE_FORMAT): str,
+                schema.Optional(cls.LOG_LINE_TEMPLATE): str,
+                schema.Optional(cls.LOG_YAML_ELEMENTS): list,
                 cls.LOGGERS_CONFIG: [
                     {
                         LoggerConfig.LOGGER_NAME: str,
-                        Optional(cls.DEBUG): bool,
-                        Optional(cls.LOG_LEVEL): str,
-                        Optional(cls.STYLE): str,
-                        Optional(cls.DATE_FORMAT): str,
-                        Optional(cls.LOG_LINE_TEMPLATE): str,
-                        Optional(cls.LOG_YAML_ELEMENTS): list[str],
+                        schema.Optional(cls.DEBUG): bool,
+                        schema.Optional(cls.LOG_LEVEL): str,
+                        schema.Optional(cls.STYLE): str,
+                        schema.Optional(cls.DATE_FORMAT): str,
+                        schema.Optional(cls.LOG_LINE_TEMPLATE): str,
+                        schema.Optional(cls.LOG_YAML_ELEMENTS): list[str],
                         LoggerConfig.STREAM_HANDLERS: [
                             {
                                 StreamHandlerConfig.TYPE: str,
-                                Optional(StreamHandlerConfig.FILE_PATH): str,
-                                Optional(cls.DEBUG): bool,
-                                Optional(cls.LOG_LEVEL): str,
-                                Optional(cls.STYLE): str,
-                                Optional(cls.DATE_FORMAT): str,
-                                Optional(cls.LOG_LINE_TEMPLATE): str,
-                                Optional(cls.LOG_YAML_ELEMENTS): list[str]
+                                schema.Optional(
+                                    StreamHandlerConfig.FILE_PATH): str,
+                                schema.Optional(cls.DEBUG): bool,
+                                schema.Optional(cls.LOG_LEVEL): str,
+                                schema.Optional(cls.STYLE): str,
+                                schema.Optional(cls.DATE_FORMAT): str,
+                                schema.Optional(cls.LOG_LINE_TEMPLATE): str,
+                                schema.Optional(
+                                    cls.LOG_YAML_ELEMENTS): list[str]
                             }
                         ]
                      }
                 ]
             }
 
-        config_schema = Schema(template)
+        config_schema = schema.Schema(template)
         try:
             config_schema.validate(config)
-        except SchemaError as se:
+        except schema.SchemaError as se:
             error = \
                 'Config file is invalid.\n'\
                 'Current config:\n'\

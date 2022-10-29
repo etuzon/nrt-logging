@@ -14,7 +14,8 @@ class LogLevelEnumTests(unittest.TestCase):
 
     def test_eq(self):
         self.assertEqual(LogLevelEnum.CRITICAL, LogLevelEnum.CRITICAL)
-        self.assertTrue(LogLevelEnum.DEBUG == LogLevelEnum.DEBUG)
+        log_level = LogLevelEnum.DEBUG
+        self.assertTrue(LogLevelEnum.DEBUG == log_level)
 
     def test_eq_negative(self):
         self.assertFalse(LogLevelEnum.INFO == LogLevelEnum.DEBUG)
@@ -27,14 +28,16 @@ class LogLevelEnumTests(unittest.TestCase):
 
     def test_qe(self):
         self.assertTrue(LogLevelEnum.CRITICAL >= LogLevelEnum.WARN)
-        self.assertTrue(LogLevelEnum.WARN >= LogLevelEnum.WARN)
+        log_level = LogLevelEnum.WARN
+        self.assertTrue(LogLevelEnum.WARN >= log_level)
 
     def test_qe_negative(self):
         self.assertFalse(LogLevelEnum.INFO >= LogLevelEnum.ERROR)
 
     def test_le(self):
         self.assertTrue(LogLevelEnum.INFO <= LogLevelEnum.WARN)
-        self.assertTrue(LogLevelEnum.TRACE <= LogLevelEnum.TRACE)
+        log_level = LogLevelEnum.TRACE
+        self.assertTrue(LogLevelEnum.TRACE <= log_level)
 
     def test_le_negative(self):
         self.assertFalse(LogLevelEnum.INFO <= LogLevelEnum.TRACE)

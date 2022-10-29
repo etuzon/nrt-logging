@@ -6,8 +6,9 @@ from datetime import datetime
 from threading import Lock
 from enum import Enum
 from inspect import stack
-from typing import IO, Optional
+from typing import IO, Optional, Union
 
+from nrt_logging.exceptions import NotImplementedCodeException
 from nrt_logging.log_format import \
     LogElementEnum, LogDateFormat, LogYamlElements
 from nrt_logging.log_level import LogLevelEnum
@@ -78,11 +79,11 @@ class LoggerStreamHandlerBase(ABC):
         f':{LogElementEnum.LINE_NUMBER.line_format}]' \
         f' {LogElementEnum.MESSAGE.line_format}'
 
-    _log_level: LogLevelEnum = None
-    _log_date_format: LogDateFormat = None
-    _log_yaml_elements: LogYamlElements = None
+    _log_level: Optional[LogLevelEnum] = None
+    _log_date_format: Optional[LogDateFormat] = None
+    _log_yaml_elements: Optional[LogYamlElements] = None
 
-    _stream: IO = None
+    _stream: Optional[IO] = None
 
     _lock: Lock
     _stack_log_start_index: int = 4
@@ -92,7 +93,7 @@ class LoggerStreamHandlerBase(ABC):
     _increase_depth_list: list[str]
     _decrease_depth_list: list[str]
 
-    _log_line_template: str = None
+    _log_line_template: Optional[str] = None
 
     _is_debug: bool = False
 
@@ -116,60 +117,60 @@ class LoggerStreamHandlerBase(ABC):
             self,
             msg: str,
             manual_depth: ManualDepthEnum = ManualDepthEnum.NO_CHANGE):
-        ...
+        raise NotImplementedCodeException
 
     @abstractmethod
     def error(
             self,
             msg: str,
             manual_depth: ManualDepthEnum = ManualDepthEnum.NO_CHANGE):
-        ...
+        raise NotImplementedCodeException
 
     @abstractmethod
     def warn(
             self,
             msg: str,
             manual_depth: ManualDepthEnum = ManualDepthEnum.NO_CHANGE):
-        ...
+        raise NotImplementedCodeException
 
     @abstractmethod
     def info(
             self,
             msg: str,
             manual_depth: ManualDepthEnum = ManualDepthEnum.NO_CHANGE):
-        ...
+        raise NotImplementedCodeException
 
     @abstractmethod
     def debug(
             self,
             msg: str,
             manual_depth: ManualDepthEnum = ManualDepthEnum.NO_CHANGE):
-        ...
+        raise NotImplementedCodeException
 
     @abstractmethod
     def trace(
             self,
             msg: str,
             manual_depth: ManualDepthEnum = ManualDepthEnum.NO_CHANGE):
-        ...
+        raise NotImplementedCodeException
 
     @abstractmethod
     def close(self):
-        ...
+        raise NotImplementedCodeException
 
     def increase_depth(self):
         stack_list = self.__get_stack_list(start_index=3)
         self._increase_depth_list.append(stack_list[0])
 
     def decrease_depth(self, level: int = 1):
+        if level < 1:
+            return
+
         stack_list = self.__get_stack_list(start_index=3)
         fm_name = stack_list[0]
         drop_list = []
 
         for i, depth in enumerate(reversed(self._depth_list)):
-            if level == 0:
-                return
-
             if depth.name == fm_name and depth.manual_depth_change == 1:
                 level -= 1
                 drop_list.append(len(self._depth_list) - 1 - i)
@@ -179,6 +180,13 @@ class LoggerStreamHandlerBase(ABC):
             self._depth_list.pop(drop_index)
 
         self._decrease_depth_list.append(stack_list[0])
+
+    def get_latest_fm_depth(self, fm_name: str) -> Optional[DepthData]:
+        for fm_depth in reversed(self._depth_list):
+            if fm_name == fm_depth.name:
+                return fm_depth
+
+        return None
 
     @property
     def style(self) -> LogStyleEnum:
@@ -209,8 +217,12 @@ class LoggerStreamHandlerBase(ABC):
         return self._log_yaml_elements
 
     @log_yaml_elements.setter
-    def log_yaml_elements(self, log_yaml_elements: LogYamlElements):
-        self._log_yaml_elements = log_yaml_elements
+    def log_yaml_elements(
+            self,
+            log_yaml_elements:
+            Union[LogYamlElements, list[LogElementEnum], set[LogElementEnum]]):
+
+        self._log_yaml_elements = LogYamlElements.build(log_yaml_elements)
 
     @property
     def log_line_template(self) -> str:
@@ -282,7 +294,7 @@ class LoggerStreamHandlerBase(ABC):
         elif self.style == LogStyleEnum.LINE:
             return self.__create_line_element_str(msg, log_level, False)
         else:
-            raise NotImplemented('Bug: Not implemented code')
+            raise NotImplementedCodeException()
 
     def __create_log_str_on_depth_plus(
             self,
@@ -318,11 +330,10 @@ class LoggerStreamHandlerBase(ABC):
                 log_str = \
                     f'{self.YAML_SPACES_SEPARATOR}{depth_4_spaces}children:'
             else:
-                raise NotImplemented('Bug: Not implemented code')
+                raise NotImplementedCodeException()
 
-        elif self._depth == 0:
-            if self.style == LogStyleEnum.YAML:
-                log_str = f'{self.YAML_DOCUMENT_SEPARATOR}'
+        elif self._depth == 0 and self.style == LogStyleEnum.YAML:
+            log_str = f'{self.YAML_DOCUMENT_SEPARATOR}'
 
         if self.style == LogStyleEnum.YAML:
             log_str += \
@@ -331,7 +342,7 @@ class LoggerStreamHandlerBase(ABC):
             log_str += \
                 f'{self.__create_line_element_str(msg, log_level, is_child)}'
         else:
-            raise NotImplemented('Bug: Not implemented code')
+            raise NotImplementedCodeException()
 
         return log_str
 
@@ -345,12 +356,12 @@ class LoggerStreamHandlerBase(ABC):
         """
         Update log depth.
 
-        :param fm_name: Frame name.
-        :param stack_list:  Stack list.
-        :param expected_parent_fm_name: Expected parent frame name.
-        :param parent_stack_list:  parent frame stack list.
-        :param manual_depth: Manual depth.
-        :return: True in case increase depth, else False.
+        @param fm_name: Frame name.
+        @param stack_list:  Stack list.
+        @param expected_parent_fm_name: Expected parent frame name.
+        @param parent_stack_list:  parent frame stack list.
+        @param manual_depth: Manual depth.
+        @return: True in case increase depth, else False.
         """
 
         # In case this is log in child method
@@ -398,13 +409,6 @@ class LoggerStreamHandlerBase(ABC):
         else:
             self._depth_list = [DepthData(name=stack_list[0])]
             self._depth = 0
-
-    def __get_parent_frame_index(self, fm_name: str) -> int:
-        for i, depth in enumerate(self._depth_list):
-            if fm_name == depth.name:
-                return i
-
-        return -1
 
     def __write(self, s: str):
         self._lock.acquire()
@@ -507,7 +511,7 @@ class LoggerStreamHandlerBase(ABC):
                 '\n' \
                 f'{self.__create_yaml_line_message_element(msg, depth_spaces)}'
 
-        raise NotImplemented(
+        raise NotImplementedCodeException(
             f'Bug: Yaml element {yaml_element} not implemented')
 
     def __create_line_element_str(
@@ -571,7 +575,6 @@ class LoggerStreamHandlerBase(ABC):
 
         return line_log
 
-
     def __create_yaml_date_element(self, depth_spaces: str) -> str:
         return \
             f'{depth_spaces}{LogElementEnum.DATE.value}:' \
@@ -610,12 +613,25 @@ class LoggerStreamHandlerBase(ABC):
 
         return False
 
-    def get_latest_fm_depth(self, fm_name: str) -> Optional[DepthData]:
-        for fm_depth in reversed(self._depth_list):
-            if fm_name == fm_depth.name:
-                return fm_depth
+    @classmethod
+    def set_log_level(cls, level: LogLevelEnum):
+        cls._log_level = level
 
-        return None
+    @classmethod
+    def set_log_style(cls, log_style: LogStyleEnum):
+        cls._style = log_style
+
+    @classmethod
+    def set_log_date_format(cls, log_date_format: LogDateFormat):
+        cls._log_date_format = log_date_format
+
+    @classmethod
+    def set_log_yaml_elements(cls, log_yaml_elements: LogYamlElements):
+        cls._log_yaml_elements = LogYamlElements.build(log_yaml_elements)
+
+    @classmethod
+    def set_log_line_template(cls, log_line_template: str):
+        cls._log_line_template = log_line_template
 
     @classmethod
     def __is_increased_child_depth(
@@ -630,9 +646,9 @@ class LoggerStreamHandlerBase(ABC):
         """
         Check if the log is in the same method of previous log.
 
-        :param expected_parent_fm_name:
-        :param stack_list:
-        :return:
+        @param expected_parent_fm_name:
+        @param stack_list:
+        @return:
         """
 
         return expected_parent_fm_name == stack_list[0]
@@ -643,26 +659,6 @@ class LoggerStreamHandlerBase(ABC):
         return \
             f'{depth_spaces}{LogElementEnum.LOG_LEVEL}:' \
             f' {log_level}'
-
-    @classmethod
-    def set_log_level(cls, level: LogLevelEnum):
-        cls.__log_level = level
-
-    @classmethod
-    def set_log_style(cls, log_style: LogStyleEnum):
-        cls._style = log_style
-
-    @classmethod
-    def set_log_date_format(cls, log_date_format: LogDateFormat):
-        cls._log_date_format = log_date_format
-
-    @classmethod
-    def set_log_yaml_elements(cls, log_yaml_elements: LogYamlElements):
-        cls._log_yaml_elements = log_yaml_elements
-
-    @classmethod
-    def set_log_line_template(cls, log_line_template: str):
-        cls._log_line_template = log_line_template
 
     @classmethod
     def __create_yaml_path_element(cls, path: str, depth_spaces: str) -> str:
@@ -770,6 +766,9 @@ class ConsoleStreamHandler(LoggerStreamHandlerBase):
         self._log(LogLevelEnum.TRACE, msg, manual_depth)
 
     def close(self):
+        """
+        close function not relevant for ConsoleStreamHandler.
+        """
         pass
 
 

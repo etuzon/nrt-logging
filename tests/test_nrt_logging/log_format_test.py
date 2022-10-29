@@ -1,5 +1,7 @@
 import unittest
 
+from parameterized import parameterized
+
 from nrt_logging.log_format import LogElementEnum, LogYamlElements
 
 
@@ -29,6 +31,15 @@ class LogYamlElementsTests(unittest.TestCase):
         self.assertEqual(
             LogYamlElements.DEFAULT_YAML_ELEMENTS,
             LogYamlElements().yaml_elements)
+
+    @parameterized.expand([
+        [{LogElementEnum.DATE, LogElementEnum.LOG_LEVEL}],
+        [[LogElementEnum.DATE, LogElementEnum.LOG_LEVEL]]
+    ])
+    def test_build(self, log_yaml_elements):
+        self.assertEqual(
+            {LogElementEnum.DATE, LogElementEnum.LOG_LEVEL},
+            LogYamlElements.build(log_yaml_elements).yaml_elements)
 
 
 if __name__ == '__main__':

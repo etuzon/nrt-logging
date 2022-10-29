@@ -16,6 +16,7 @@ exclude_lines =
     if __name__ == .__main__.:
     def _debug
     def __debug
+    raise NotImplementedCodeException
 
 [html]
 directory = coverage_report/html
@@ -25,4 +26,4 @@ output = coverage_report/report.json
 pretty_print = true
 
 [lcov]
-output = coverage_report/coverage.lcov
+output = coverage_report/lcov.info

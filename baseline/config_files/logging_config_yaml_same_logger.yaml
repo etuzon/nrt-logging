@@ -1,0 +1,15 @@
+loggers:
+  - name: TEST1
+    stream_handlers:
+      - type: file
+        file_path: temp/log_test_1.txt
+        log_level: DEBUG
+        style: yaml
+        date_format: '%Y-%m'
+  - name: TEST1
+    stream_handlers:
+      - type: file
+        file_path: temp/log_test_1.txt
+        log_level: DEBUG
+        style: yaml
+        date_format: '%Y-%m'

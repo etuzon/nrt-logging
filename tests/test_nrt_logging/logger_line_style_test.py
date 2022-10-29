@@ -20,12 +20,6 @@ class NrtLoggerManagerTests(TestBase):
         if logger_1:
             logger_1.close_stream_handlers()
 
-    def tearDown(self):
-        logger_1 = logger_manager.get_logger(NAME_1)
-
-        if logger_1:
-            logger_1.close_stream_handlers()
-
     @stdout_redirect
     def test_logger_line(self):
         sh = ConsoleStreamHandler()
@@ -48,7 +42,7 @@ class NrtLoggerManagerTests(TestBase):
             LogLevelEnum.TRACE,
             f'{TEST_FILE_NAME}.{self.__class__.__name__}',
             'test_logger_line',
-            37,
+            31,
             msg)
 
     @stdout_redirect
@@ -87,7 +81,7 @@ class NrtLoggerManagerTests(TestBase):
             LogLevelEnum.WARN,
             expected_path,
             expected_method_name,
-            62,
+            56,
             msg)
 
         children = log_dict.get('children')
@@ -100,7 +94,7 @@ class NrtLoggerManagerTests(TestBase):
             LogLevelEnum.ERROR,
             expected_path,
             expected_method_name,
-            65,
+            59,
             child_msg_1)
 
         self._verify_log_line(
@@ -109,7 +103,7 @@ class NrtLoggerManagerTests(TestBase):
             LogLevelEnum.CRITICAL,
             expected_path,
             expected_method_name,
-            68,
+            62,
             child_msg_2)
 
         children_2 = children[1].get('children')
@@ -122,7 +116,7 @@ class NrtLoggerManagerTests(TestBase):
             LogLevelEnum.WARN,
             expected_path,
             expected_method_name,
-            71,
+            65,
             child_msg_3)
 
         self._verify_log_line(
@@ -131,7 +125,7 @@ class NrtLoggerManagerTests(TestBase):
             LogLevelEnum.INFO,
             expected_path,
             expected_method_name,
-            73,
+            67,
             child_msg_2)
 
     @stdout_redirect
@@ -162,7 +156,7 @@ class NrtLoggerManagerTests(TestBase):
             LogLevelEnum.WARN,
             expected_path,
             expected_method_name,
-            145,
+            139,
             msg)
 
         children = log_dict.get('children')
@@ -175,7 +169,7 @@ class NrtLoggerManagerTests(TestBase):
             LogLevelEnum.ERROR,
             expected_path,
             expected_method_name,
-            148,
+            142,
             child_msg_1)
 
     @stdout_redirect
@@ -200,7 +194,7 @@ class NrtLoggerManagerTests(TestBase):
             LogLevelEnum.INFO,
             f'{TEST_FILE_NAME}.{self.__class__.__name__}',
             'test_default_sh_parameters',
-            188,
+            182,
             msg)
 
     @stdout_redirect
