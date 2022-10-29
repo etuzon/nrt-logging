@@ -1,12 +1,13 @@
 # Hierarchical logging in yaml format.
 
 ![PyPI](https://img.shields.io/pypi/v/nrt-logging?color=blueviolet&style=plastic)
-![PyPI - Python Version](https://img.shields.io/pypi/pyversions/nrt-logging?color=brown&style=plastic)
+![PyPI - Python Version](https://img.shields.io/pypi/pyversions/nrt-logging?color=greens&style=plastic)
 ![PyPI - License](https://img.shields.io/pypi/l/nrt-logging?color=blue&style=plastic)
 ![PyPI - Downloads](https://img.shields.io/pypi/dm/nrt-logging?color=greenstyle=plastic)
 ![Coveralls](https://img.shields.io/coveralls/github/etuzon/Python-NRT-Logging?style=plastic)
-![GitHub code size in bytes](https://img.shields.io/github/languages/code-size/etuzon/python-nrt-logging?style=plastic)
-![GitHub last commit](https://img.shields.io/github/last-commit/etuzon/python-nrt-logging)
+![Snyk Vulnerabilities for GitHub Repo](https://img.shields.io/snyk/vulnerabilities/github/etuzon/Python-NRT-Logging?color=blue&style=plastic)
+![GitHub code size in bytes](https://img.shields.io/github/languages/code-size/etuzon/Python-NRT-Logging?style=plastic)
+![GitHub last commit](https://img.shields.io/github/last-commit/etuzon/Python-NRT-Logging?style=plastic)
 
 Hierarchical logging help to group logs that are related to the same code flow.
 

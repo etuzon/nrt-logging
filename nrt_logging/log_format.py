@@ -56,5 +56,11 @@ class LogYamlElements:
             LogElementEnum.MESSAGE
         )
 
-    yaml_elements: set[LogElementEnum] = \
-        DEFAULT_YAML_ELEMENTS
+    yaml_elements: set[LogElementEnum] = DEFAULT_YAML_ELEMENTS
+
+    @classmethod
+    def build(cls, log_yaml_elements):
+        if isinstance(log_yaml_elements, list):
+            return LogYamlElements(yaml_elements=set(log_yaml_elements))
+
+        return LogYamlElements(yaml_elements=log_yaml_elements)

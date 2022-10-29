@@ -1,14 +1,15 @@
 import unittest
-from coverage import Coverage, CoverageData
+from typing import Optional
+from coverage import Coverage
 
 
 class TestsSuite:
     CONFIG_FILE = ".coveragerc"
 
     is_tests_suite_run: bool = False
-    log_file_path: str = None
+    log_file_path: Optional[str] = None
 
-    __coverage: Coverage = None
+    __coverage: Optional[Coverage] = None
     __is_coverage: bool
 
     def __init__(self, is_coverage: bool = False):

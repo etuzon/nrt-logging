@@ -1,0 +1,11 @@
+loggers:
+  - name: TEST1
+    stream_handlers:
+      - type: file
+        file_path: temp/log_test_1.txt
+        log_level: DEBUG
+        style: yaml
+        date_format: '%Y-%m'
+        log_line_template: 'Test $date$ $message$'
+        log_yaml_elements:
+          [ 'log_level', 'INVALID_VALUE', 'message' ]

@@ -37,6 +37,8 @@ def is_date_in_format(date_str: str, date_format: str):
 class TestBase(unittest.TestCase):
     TEMP_PATH = os.path.join(os.getcwd(), 'temp')
 
+    Y_M_DATE_FORMAT = '%Y-%m'
+
     def _verify_log_line(
             self,
             log_line: str,
