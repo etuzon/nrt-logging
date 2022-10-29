@@ -1,4 +1,4 @@
-- log: 2022-10-22 11:59:10.368002 [ERROR] [demo_classes.py.A.a2_manual:41] Error Test 123
+- log: 2022-10-29 22:02:22.259563 [ERROR] [demo_classes.py.Parent.a2_manual:47] MSG_1
   children:
-    - log: 2022-10-22 11:59:10.390593 [WARN] [demo_classes.py.A.a1:32] Message 1
-    - log: 2022-10-22 11:59:10.436596 [WARN] [demo_classes.py.A.a1:32] Message 1
+    - log: 2022-10-29 22:02:22.262618 [WARN] [demo_classes.py.Parent.a1:38] MSG_1
+    - log: 2022-10-29 22:02:22.269823 [WARN] [demo_classes.py.Parent.a1:38] MSG_1
