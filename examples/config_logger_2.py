@@ -1,7 +1,6 @@
 from examples.demo_classes.demo_classes import \
-    NAME_1, Parent, NAME_2
+    NAME_1, Parent
 from nrt_logging.logger_manager import logger_manager
-from nrt_logging.logger_stream_handlers import ManualDepthEnum
 
 CONFIG_FILE_PATH = 'config/config_2.yaml'
 

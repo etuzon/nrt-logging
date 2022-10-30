@@ -13,9 +13,6 @@ from tests.test_nrt_logging.test_base import \
 
 class LogStyleEnumTests(TestBase):
 
-    def test_name(self):
-        self.assertEqual('yaml', LogStyleEnum.YAML.name)
-
     def test_build_by_name(self):
         self.assertEqual(
             LogStyleEnum.YAML, LogStyleEnum.build_by_name('YaMl'))
@@ -84,7 +81,7 @@ class FileStreamHandlerTests(TestBase):
             LogLevelEnum.CRITICAL,
             expected_class_path,
             expected_method_name,
-            61,
+            58,
             msg_1)
 
         children = log_list[0].get('children')
@@ -97,7 +94,7 @@ class FileStreamHandlerTests(TestBase):
             LogLevelEnum.ERROR,
             expected_class_path,
             expected_method_name,
-            62,
+            59,
             child_1)
 
         self._verify_log_line(
@@ -106,7 +103,7 @@ class FileStreamHandlerTests(TestBase):
             LogLevelEnum.WARN,
             expected_class_path,
             expected_method_name,
-            63,
+            60,
             child_2)
 
         self._verify_log_line(
@@ -115,7 +112,7 @@ class FileStreamHandlerTests(TestBase):
             LogLevelEnum.INFO,
             expected_class_path,
             expected_method_name,
-            64,
+            61,
             child_1)
 
         self._verify_log_line(
@@ -124,7 +121,7 @@ class FileStreamHandlerTests(TestBase):
             LogLevelEnum.INFO,
             expected_class_path,
             expected_method_name,
-            66,
+            63,
             msg_2)
 
         children = log_list[2].get('children')
@@ -137,7 +134,7 @@ class FileStreamHandlerTests(TestBase):
             LogLevelEnum.ERROR,
             expected_class_path,
             expected_method_name,
-            68,
+            65,
             child_1)
 
         self._verify_log_line(
@@ -146,7 +143,7 @@ class FileStreamHandlerTests(TestBase):
             LogLevelEnum.INFO,
             expected_class_path,
             expected_method_name,
-            70,
+            67,
             msg_2)
 
 

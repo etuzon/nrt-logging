@@ -17,21 +17,24 @@ jobs:
         python-version: ["3.9", "3.10", "3.11"]
 
     steps:
-    - uses: actions/checkout@v3
-    - name: Set up Python ${{ matrix.python-version }}
-      uses: actions/setup-python@v3
-      with:
-        python-version: ${{ matrix.python-version }}
-    - name: Install dependencies
-      run: |
-        python -m pip install --upgrade pip
-        python -m pip install coverage deepdiff parameterized
-        if [ -f requirements.txt ]; then pip install -r requirements.txt; fi
-    - name: Test with unittest
-      run: |
-        python tests_execution.py
-    - name: Send lcov.info to coveralls
-      uses: coverallsapp/github-action@master
-      with:
-        github-token: ${{ secrets.GITHUB_TOKEN }}
-        path-to-lcov: coverage_report/lcov.info
+      - name: 'Checkout Repository'
+        uses: actions/checkout@v3
+      - name: Set up Python ${{ matrix.python-version }}
+        uses: actions/setup-python@v3
+        with:
+          python-version: ${{ matrix.python-version }}
+      - name: Install dependencies
+        run: |
+          python -m pip install --upgrade pip
+          python -m pip install coverage deepdiff parameterized
+          if [ -f requirements.txt ]; then pip install -r requirements.txt; fi
+      - name: 'Dependency Review'
+        uses: actions/dependency-review-action@v2
+      - name: Test with unittest
+        run: |
+          python tests_execution.py
+      - name: Send lcov.info to coveralls
+        uses: coverallsapp/github-action@master
+        with:
+          github-token: ${{ secrets.GITHUB_TOKEN }}
+          path-to-lcov: coverage_report/lcov.info

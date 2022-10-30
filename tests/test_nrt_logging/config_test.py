@@ -224,10 +224,13 @@ class LoggerManagerConfigTests(TestBase):
             log_2 = yaml.safe_load(f.read())
 
         self.assertEqual(
-            LogLevelEnum.ERROR.name, log_2.get(LogElementEnum.LOG_LEVEL.name))
+            LogLevelEnum.ERROR.name,
+            log_2.get(LogElementEnum.LOG_LEVEL.element_name))
         self.assertTrue(
-            is_date_in_format(str(log_2.get(LogElementEnum.DATE.name)), '%Y'))
-        self.assertEqual(msg_error_2, log_2.get(LogElementEnum.MESSAGE.name))
+            is_date_in_format(
+                str(log_2.get(LogElementEnum.DATE.element_name)), '%Y'))
+        self.assertEqual(
+            msg_error_2, log_2.get(LogElementEnum.MESSAGE.element_name))
 
     def test_recreate_logger_line(self):
         msg_1 = 'msg_1'
@@ -388,7 +391,7 @@ class LoggerManagerConfigTests(TestBase):
             LogLevelEnum.DEBUG,
             self.expected_class_path,
             'test_recreate_logger_yaml',
-            346,
+            349,
             msg_1)
         self.__verify_log_yaml(
             yaml_list[1],
@@ -396,7 +399,7 @@ class LoggerManagerConfigTests(TestBase):
             LogLevelEnum.INFO,
             self.expected_class_path,
             'test_recreate_logger_yaml',
-            353,
+            356,
             msg_2)
 
         self.__verify_log_yaml(
@@ -405,7 +408,7 @@ class LoggerManagerConfigTests(TestBase):
             LogLevelEnum.INFO,
             self.expected_class_path,
             'test_recreate_logger_yaml',
-            360,
+            363,
             msg_1)
 
         children = yaml_list[2].get('children')
@@ -417,7 +420,7 @@ class LoggerManagerConfigTests(TestBase):
             LogLevelEnum.INFO,
             self.expected_class_path,
             'test_recreate_logger_yaml',
-            361,
+            364,
             child_1)
 
         children = child.get('children')
@@ -429,7 +432,7 @@ class LoggerManagerConfigTests(TestBase):
             LogLevelEnum.INFO,
             self.expected_class_path,
             'test_recreate_logger_yaml',
-            362,
+            365,
             child_2)
 
         children = child.get('children')
@@ -441,7 +444,7 @@ class LoggerManagerConfigTests(TestBase):
             LogLevelEnum.INFO,
             self.expected_class_path,
             'test_recreate_logger_yaml',
-            363,
+            366,
             child_1)
         child = children[1]
         self.__verify_log_yaml(
@@ -450,7 +453,7 @@ class LoggerManagerConfigTests(TestBase):
             LogLevelEnum.INFO,
             self.expected_class_path,
             'test_recreate_logger_yaml',
-            364,
+            367,
             child_2)
 
         self.__verify_log_yaml(
@@ -459,7 +462,7 @@ class LoggerManagerConfigTests(TestBase):
             LogLevelEnum.INFO,
             self.expected_class_path,
             'test_recreate_logger_yaml',
-            370,
+            373,
             msg_2)
 
         children = yaml_list[3].get('children')
@@ -471,7 +474,7 @@ class LoggerManagerConfigTests(TestBase):
             LogLevelEnum.INFO,
             self.expected_class_path,
             'test_recreate_logger_yaml',
-            371,
+            374,
             child_2)
 
     def test_config_logger_with_invalid_log_level_negative(self):
@@ -557,23 +560,23 @@ class LoggerManagerConfigTests(TestBase):
 
         self.assertTrue(
             is_date_in_format(
-                str(log_yaml.get(LogElementEnum.DATE.name)),
+                str(log_yaml.get(LogElementEnum.DATE.element_name)),
                 expected_date_format))
         self.assertEqual(
             expected_log_level.name,
-            log_yaml.get(LogElementEnum.LOG_LEVEL.name))
+            log_yaml.get(LogElementEnum.LOG_LEVEL.element_name))
         self.assertEqual(
             expected_path,
-            log_yaml.get(LogElementEnum.PATH.name))
+            log_yaml.get(LogElementEnum.PATH.element_name))
         self.assertEqual(
             expected_method,
-            log_yaml.get(LogElementEnum.METHOD.name))
+            log_yaml.get(LogElementEnum.METHOD.element_name))
         self.assertEqual(
             expected_line_number,
-            log_yaml.get(LogElementEnum.LINE_NUMBER.name))
+            log_yaml.get(LogElementEnum.LINE_NUMBER.element_name))
         self.assertEqual(
             expected_message,
-            log_yaml.get(LogElementEnum.MESSAGE.name))
+            log_yaml.get(LogElementEnum.MESSAGE.element_name))
 
 
 class StreamHandlerConfigTests(TestBase):
