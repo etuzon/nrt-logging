@@ -6,8 +6,6 @@ from nrt_logging.log_format import LogElementEnum, LogYamlElements
 
 
 class LogElementEnumTests(unittest.TestCase):
-    def test_name(self):
-        self.assertEqual('message', LogElementEnum.MESSAGE.name)
 
     def test_line_format(self):
         self.assertEqual('$date$', LogElementEnum.DATE.line_format)

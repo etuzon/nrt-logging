@@ -3,35 +3,34 @@ from enum import Enum
 
 
 class LogElementEnum(Enum):
-    DATE = 'date', '$date$'
-    LOG_LEVEL = 'log_level', '$log_level$'
-    PATH = 'path', '$path$'
-    METHOD = 'method', '$method$'
-    LINE_NUMBER = 'line_number', '$line_number$'
-    MESSAGE = 'message', '$message$'
+    DATE = '$date$'
+    LOG_LEVEL = '$log_level$'
+    PATH = '$path$'
+    METHOD = '$method$'
+    LINE_NUMBER = '$line_number$'
+    MESSAGE = '$message$'
 
-    def __init__(self, name: str, line_format: str):
-        self.__name = name
+    def __init__(self, line_format: str):
         self.__line_format = line_format
-        self._value_ = name
-
-    @property
-    def name(self) -> str:
-        return self.__name
+        self._value_ = self.name.lower()
 
     @property
     def line_format(self) -> str:
         return self.__line_format
+
+    @property
+    def element_name(self) -> str:
+        return self.name.lower()
 
     def __str__(self):
         return self.value
 
     @classmethod
     def build(cls, name: str):
-        name = name.lower()
+        name_u = name.upper()
 
         for log_element_enum in LogElementEnum:
-            if name == log_element_enum.name:
+            if name_u == log_element_enum.name:
                 return log_element_enum
 
         raise ValueError(f'[{name}] is not valid log element name')

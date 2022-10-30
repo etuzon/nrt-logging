@@ -55,9 +55,9 @@ class TestBase(unittest.TestCase):
 
         expected_date_format_list = expected_date_format.split(' ')
 
-        for expected_date_format in expected_date_format_list:
+        for expected_date in expected_date_format_list:
             date = log_line_split[index]
-            self.assertTrue(is_date_in_format(date, expected_date_format))
+            self.assertTrue(is_date_in_format(date, expected_date))
             index += 1
 
         self.assertEqual(f'[{expected_log_level.name}]', log_line_split[index])

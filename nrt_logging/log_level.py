@@ -2,20 +2,12 @@ from enum import Enum
 
 
 class LogLevelEnum(Enum):
-    TRACE = 'TRACE', 10
-    DEBUG = 'DEBUG', 20
-    INFO = 'INFO', 30
-    WARN = 'WARN', 40
-    ERROR = 'ERROR', 50
-    CRITICAL = 'CRITICAL', 60
-
-    def __init__(self, name: str, value: int):
-        self.__name = name
-        self._value_ = value
-
-    @property
-    def name(self) -> str:
-        return self.__name
+    TRACE = 10
+    DEBUG = 20
+    INFO = 30
+    WARN = 40
+    ERROR = 50
+    CRITICAL = 60
 
     def __str__(self) -> str:
         return self.name
@@ -37,10 +29,10 @@ class LogLevelEnum(Enum):
 
     @classmethod
     def build(cls, name: str):
-        name = name.upper()
+        name_u = name.upper()
 
         for log_enum in LogLevelEnum:
-            if name == log_enum.name:
+            if name_u == log_enum.name:
                 return log_enum
 
         raise ValueError(f'[{name}] is not valid log level name')

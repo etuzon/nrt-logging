@@ -20,23 +20,15 @@ class StreamHandlerEnum(Enum):
 
 
 class LogStyleEnum(Enum):
-    YAML = 'yaml', 1
-    LINE = 'line', 2
-
-    def __init__(self, name: str, value: str):
-        self.__name = name
-        self._value_ = value
-
-    @property
-    def name(self):
-        return self.__name
+    YAML = 1
+    LINE = 2
 
     @classmethod
     def build_by_name(cls, name: str):
-        name = name.lower()
+        name_u = name.upper()
 
         for style_enum in LogStyleEnum:
-            if name == style_enum.name:
+            if name_u == style_enum.name:
                 return style_enum
 
         raise ValueError(f'[{name}] is not valid log style name')
@@ -293,8 +285,8 @@ class LoggerStreamHandlerBase(ABC):
                 + self.__create_yaml_elements_str(msg, log_level, False)
         elif self.style == LogStyleEnum.LINE:
             return self.__create_line_element_str(msg, log_level, False)
-        else:
-            raise NotImplementedCodeException()
+
+        raise NotImplementedCodeException()
 
     def __create_log_str_on_depth_plus(
             self,
@@ -376,11 +368,11 @@ class LoggerStreamHandlerBase(ABC):
                 self.__update_depth_for_change_in_manual_depth(
                     fm_name, manual_depth)
             return is_child
+
         # In case go up in the stack so search previous parent
-        else:
-            self.__update_depth_for_go_up_in_stack(
-                stack_list, manual_depth)
-            return False
+        self.__update_depth_for_go_up_in_stack(
+            stack_list, manual_depth)
+        return False
 
     def __update_depth_for_go_up_in_stack(
             self, stack_list: list[str], manual_depth: ManualDepthEnum):
@@ -400,8 +392,8 @@ class LoggerStreamHandlerBase(ABC):
                 else:
                     self._depth_list.append(DepthData(name=stack_list[0]))
                 return
-            else:
-                reverse_depth += parent.manual_depth_change + 1
+
+            reverse_depth += parent.manual_depth_change + 1
 
         if manual_depth.value:
             self.__update_depth_for_change_in_manual_depth(
@@ -608,7 +600,8 @@ class LoggerStreamHandlerBase(ABC):
         if manual_depth == ManualDepthEnum.INCREASE:
             self.__update_depth_for_manual_increased_child_depth(fm_name)
             return True
-        elif manual_depth == ManualDepthEnum.DECREASE:
+
+        if manual_depth == ManualDepthEnum.DECREASE:
             self.__update_depth_for_manual_decreased_child_depth(fm_name)
 
         return False
