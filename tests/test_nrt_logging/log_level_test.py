@@ -12,6 +12,9 @@ class LogLevelEnumTests(unittest.TestCase):
         self.assertTrue(str(LogLevelEnum.INFO) == 'INFO')
         self.assertTrue(f'{LogLevelEnum.ERROR}' == 'ERROR')
 
+    def test_hash(self):
+        self.assertEqual(LogLevelEnum.WARN.value, hash(LogLevelEnum.WARN))
+
     def test_eq(self):
         self.assertEqual(LogLevelEnum.CRITICAL, LogLevelEnum.CRITICAL)
         log_level = LogLevelEnum.DEBUG
