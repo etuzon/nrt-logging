@@ -5,9 +5,9 @@
 ![PyPI - License](https://img.shields.io/pypi/l/nrt-logging?color=blue&style=plastic)
 ![PyPI - Downloads](https://img.shields.io/pypi/dm/nrt-logging?color=greenstyle=plastic)
 ![Coveralls](https://img.shields.io/coveralls/github/etuzon/Python-NRT-Logging?style=plastic)
-![Snyk Vulnerabilities for GitHub Repo](https://img.shields.io/snyk/vulnerabilities/github/etuzon/Python-NRT-Logging?color=blue&style=plastic)
 ![GitHub code size in bytes](https://img.shields.io/github/languages/code-size/etuzon/Python-NRT-Logging?style=plastic)
 ![GitHub last commit](https://img.shields.io/github/last-commit/etuzon/Python-NRT-Logging?style=plastic)
+[![DeepSource](https://deepsource.io/gh/etuzon/Python-NRT-Logging.svg/?label=active+issues&token=3pUgM1IEwZG6Gpuc065dKDxM)](https://deepsource.io/gh/etuzon/Python-NRT-Logging/?ref=repository-badge)
 
 Hierarchical logging help to group logs that are related to the same code flow.
 
@@ -89,22 +89,21 @@ from nrt_logging.logger_stream_handlers import \
     ConsoleStreamHandler, LogStyleEnum
 
 
-def logging_line_style():
+def logging_style(log_style: LogStyleEnum):
     sh = ConsoleStreamHandler()
-    sh.style = LogStyleEnum.LINE
+    sh.style = log_style
     logger = logger_manager.get_logger(NAME_1)
     logger.add_stream_handler(sh)
     p = Parent()
     p.a1()
+
+
+def logging_line_style():
+    logging_style(LogStyleEnum.LINE)
 
 
 def logging_yaml_style():
-    sh = ConsoleStreamHandler()
-    sh.style = LogStyleEnum.YAML
-    logger = logger_manager.get_logger(NAME_1)
-    logger.add_stream_handler(sh)
-    p = Parent()
-    p.a1()
+    logging_style(LogStyleEnum.YAML)
 
 
 logging_yaml_style()
@@ -113,21 +112,21 @@ logging_yaml_style()
 Output
 ```YAML
 ---
-date: 2022-10-29 22:05:08.967576
+date: 2022-10-31 17:59:04.653084
 log_level: WARN
 path: demo_classes.py.Parent
 method: a1
 line_number: 38
 message: MSG_1
 children:
-  - date: 2022-10-29 22:05:08.968573
+  - date: 2022-10-31 17:59:04.655071
     log_level: INFO
     path: demo_classes.py.Child
     method: child_1
     line_number: 16
     message: Child 1
     children:
-      - date: 2022-10-29 22:05:08.970566
+      - date: 2022-10-31 17:59:04.656137
         log_level: INFO
         path: demo_classes.py.Child
         method: child_2
@@ -136,6 +135,14 @@ children:
 ```
 
 #### Output in LINE style
+
+```YAML
+- log: 2022-10-31 18:16:54.033735 [WARN] [demo_classes.py.Parent.a1:38] MSG_1
+  children:
+    - log: 2022-10-31 18:16:54.034660 [INFO] [demo_classes.py.Child.child_1:16] Child 1
+      children:
+        - log: 2022-10-31 18:16:54.036723 [INFO] [demo_classes.py.Child.child_2:20] Child 2
+```
 
 ```Python
 from nrt_logging.log_level import LogLevelEnum
@@ -163,13 +170,13 @@ logger.info('continue main level')
 
 Output
 ```YAML
-- log: 2022-10-29 22:06:23.325037 [INFO] [manual_hierarchy_line_logging_1.py.<module>:13] main level log
+- log: 2022-10-31 18:18:34.520544 [INFO] [manual_hierarchy_line_logging_1.py.<module>:13] main level log
   children:
-    - log: 2022-10-29 22:06:23.326033 [INFO] [manual_hierarchy_line_logging_1.py.<module>:15] child 1
+    - log: 2022-10-31 18:18:34.522606 [INFO] [manual_hierarchy_line_logging_1.py.<module>:15] child 1
       children:
-        - log: 2022-10-29 22:06:23.327030 [INFO] [manual_hierarchy_line_logging_1.py.<module>:17] child 1_1
-- log: 2022-10-29 22:06:23.328027 [INFO] [manual_hierarchy_line_logging_1.py.<module>:19] child 2
-- log: 2022-10-29 22:06:23.330020 [INFO] [manual_hierarchy_line_logging_1.py.<module>:21] continue main level
+        - log: 2022-10-31 18:18:34.523784 [INFO] [manual_hierarchy_line_logging_1.py.<module>:17] child 1_1
+- log: 2022-10-31 18:18:34.524810 [INFO] [manual_hierarchy_line_logging_1.py.<module>:19] child 2
+- log: 2022-10-31 18:18:34.525864 [INFO] [manual_hierarchy_line_logging_1.py.<module>:21] continue main level
 ```
 
 ### Config file

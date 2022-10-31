@@ -12,8 +12,11 @@ class LogLevelEnum(Enum):
     def __str__(self) -> str:
         return self.name
 
+    def __hash__(self):
+        return hash(self.value)
+
     def __eq__(self, other):
-        return self.value == other.value
+        return isinstance(other, LogLevelEnum) and self.value == other.value
 
     def __gt__(self, other):
         return self.value > other.value

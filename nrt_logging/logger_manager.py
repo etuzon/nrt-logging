@@ -1,6 +1,7 @@
 from typing import Optional
 
-from nrt_logging.config import LoggerManagerConfig, LoggerConfig, StreamHandlerConfig, ConfigBase
+from nrt_logging.config import \
+    LoggerManagerConfig, LoggerConfig, StreamHandlerConfig, ConfigBase
 from nrt_logging.log_format import LogDateFormat
 from nrt_logging.logger import NrtLogger
 from nrt_logging.logger_stream_handlers import LoggerStreamHandlerBase

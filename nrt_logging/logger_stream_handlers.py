@@ -262,10 +262,10 @@ class LoggerStreamHandlerBase(ABC):
 
     def __update_manual_depth(
             self, fm_name: str, manual_depth: ManualDepthEnum):
-        if manual_depth == ManualDepthEnum.NO_CHANGE:
-            if fm_name in self._increase_depth_list:
-                self._increase_depth_list.remove(fm_name)
-                return ManualDepthEnum.INCREASE
+        if manual_depth == ManualDepthEnum.NO_CHANGE \
+                and fm_name in self._increase_depth_list:
+            self._increase_depth_list.remove(fm_name)
+            return ManualDepthEnum.INCREASE
 
         return manual_depth
 
@@ -762,7 +762,6 @@ class ConsoleStreamHandler(LoggerStreamHandlerBase):
         """
         close function not relevant for ConsoleStreamHandler.
         """
-        pass
 
 
 class FileStreamHandler(LoggerStreamHandlerBase):

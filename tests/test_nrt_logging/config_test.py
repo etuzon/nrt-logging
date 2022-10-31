@@ -7,8 +7,10 @@ from nrt_logging.config import StreamHandlerConfig
 from nrt_logging.log_format import LogElementEnum
 from nrt_logging.log_level import LogLevelEnum
 from nrt_logging.logger_manager import logger_manager
-from nrt_logging.logger_stream_handlers import ManualDepthEnum, LoggerStreamHandlerBase
-from tests.test_nrt_logging.test_base import TestBase, stdout_redirect, r_stdout, is_date_in_format
+from nrt_logging.logger_stream_handlers import \
+    ManualDepthEnum, LoggerStreamHandlerBase
+from tests.test_nrt_logging.test_base import \
+    TestBase, stdout_redirect, r_stdout, is_date_in_format
 
 
 class LoggerManagerConfigTests(TestBase):
@@ -391,7 +393,7 @@ class LoggerManagerConfigTests(TestBase):
             LogLevelEnum.DEBUG,
             self.expected_class_path,
             'test_recreate_logger_yaml',
-            349,
+            351,
             msg_1)
         self.__verify_log_yaml(
             yaml_list[1],
@@ -399,7 +401,7 @@ class LoggerManagerConfigTests(TestBase):
             LogLevelEnum.INFO,
             self.expected_class_path,
             'test_recreate_logger_yaml',
-            356,
+            358,
             msg_2)
 
         self.__verify_log_yaml(
@@ -408,7 +410,7 @@ class LoggerManagerConfigTests(TestBase):
             LogLevelEnum.INFO,
             self.expected_class_path,
             'test_recreate_logger_yaml',
-            363,
+            365,
             msg_1)
 
         children = yaml_list[2].get('children')
@@ -420,7 +422,7 @@ class LoggerManagerConfigTests(TestBase):
             LogLevelEnum.INFO,
             self.expected_class_path,
             'test_recreate_logger_yaml',
-            364,
+            366,
             child_1)
 
         children = child.get('children')
@@ -432,7 +434,7 @@ class LoggerManagerConfigTests(TestBase):
             LogLevelEnum.INFO,
             self.expected_class_path,
             'test_recreate_logger_yaml',
-            365,
+            367,
             child_2)
 
         children = child.get('children')
@@ -444,7 +446,7 @@ class LoggerManagerConfigTests(TestBase):
             LogLevelEnum.INFO,
             self.expected_class_path,
             'test_recreate_logger_yaml',
-            366,
+            368,
             child_1)
         child = children[1]
         self.__verify_log_yaml(
@@ -453,7 +455,7 @@ class LoggerManagerConfigTests(TestBase):
             LogLevelEnum.INFO,
             self.expected_class_path,
             'test_recreate_logger_yaml',
-            367,
+            369,
             child_2)
 
         self.__verify_log_yaml(
@@ -462,7 +464,7 @@ class LoggerManagerConfigTests(TestBase):
             LogLevelEnum.INFO,
             self.expected_class_path,
             'test_recreate_logger_yaml',
-            373,
+            375,
             msg_2)
 
         children = yaml_list[3].get('children')
@@ -474,7 +476,7 @@ class LoggerManagerConfigTests(TestBase):
             LogLevelEnum.INFO,
             self.expected_class_path,
             'test_recreate_logger_yaml',
-            374,
+            376,
             child_2)
 
     def test_config_logger_with_invalid_log_level_negative(self):
