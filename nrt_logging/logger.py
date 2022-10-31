@@ -85,6 +85,9 @@ class NrtLogger:
             handler.decrease_depth(level)
 
     def add_stream_handler(self, stream_handler: LoggerStreamHandlerBase):
+        if self.is_debug:
+            stream_handler.is_debug = self.is_debug
+
         self.__stream_handler_list.append(stream_handler)
 
     def close_stream_handlers(self):
