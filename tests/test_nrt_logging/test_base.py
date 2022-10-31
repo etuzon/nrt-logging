@@ -34,6 +34,7 @@ def is_date_in_format(date_str: str, date_format: str):
         return False
 
 
+# skipcq: PTC-W0046
 class TestBase(unittest.TestCase):
     TEMP_PATH = os.path.join(os.getcwd(), 'temp')
 
@@ -47,7 +48,8 @@ class TestBase(unittest.TestCase):
             expected_class_path: str,
             expected_method_name: str,
             expected_line_number: int,
-            expected_msg: str):
+            expected_msg: str,
+            is_debug: bool = False):
 
         log_line_split = log_line.split(' ')
 
@@ -67,4 +69,8 @@ class TestBase(unittest.TestCase):
             f':{expected_line_number}'
 
         self.assertEqual(f'[{expected_code_location}]', log_line_split[index + 1])
-        self.assertEqual(expected_msg, log_line_split[index + 2])
+        if is_debug:
+            self.assertEqual(f'{expected_msg}\nNRT-Logging', log_line_split[index + 2])
+            self.assertTrue(log_line_split[index + 3].startswith('DEBUG'))
+        else:
+            self.assertEqual(expected_msg, log_line_split[index + 2])

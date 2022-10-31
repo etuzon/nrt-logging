@@ -24,6 +24,9 @@ class NrtLoggerManager:
         if yaml_logger is None:
             self.__logger_dict[name] = NrtLogger()
 
+        if self.__is_debug:
+            self.__logger_dict[name].is_debug = self.__is_debug
+
         return self.__logger_dict[name]
 
     def close_logger(self, name):
