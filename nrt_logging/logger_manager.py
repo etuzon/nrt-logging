@@ -56,11 +56,16 @@ class NrtLoggerManager:
     def __build_logger_from_config(self, logger_config: LoggerConfig):
         logger = logger_manager.get_logger(logger_config.name)
 
+        logger_level_set = set()
+
         for sh_config in logger_config.stream_handler_list:
             sh = \
                 self.__build_stream_handler_from_config(
                     sh_config, logger_config)
+            logger_level_set.add(sh.log_level)
             logger.add_stream_handler(sh)
+
+        logger.update_log_level(min(logger_level_set), False)
 
     def __build_stream_handler_from_config(
             self,

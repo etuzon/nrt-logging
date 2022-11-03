@@ -55,10 +55,11 @@ class DepthData:
     total_manual_depth: int = 0
 
 
-class LoggerStreamHandlerBase(ABC):
-    DEFAULT_LOG_STYLE = LogStyleEnum.LINE
-    DEFAULT_LOG_LEVEL = LogLevelEnum.INFO
+DEFAULT_LOG_STYLE = LogStyleEnum.LINE
+DEFAULT_LOG_LEVEL = LogLevelEnum.INFO
 
+
+class LoggerStreamHandlerBase(ABC):
     YAML_SPACES_SEPARATOR = ' ' * 2
     YAML_CHILDREN_SPACES_SEPARATOR = ' ' * 4
     YAML_DOCUMENT_SEPARATOR = '---'
@@ -71,7 +72,6 @@ class LoggerStreamHandlerBase(ABC):
         f':{LogElementEnum.LINE_NUMBER.line_format}]' \
         f' {LogElementEnum.MESSAGE.line_format}'
 
-    _log_level: Optional[LogLevelEnum] = None
     _log_date_format: Optional[LogDateFormat] = None
     _log_yaml_elements: Optional[LogYamlElements] = None
 
@@ -79,7 +79,8 @@ class LoggerStreamHandlerBase(ABC):
 
     _lock: Lock
     _stack_log_start_index: int = 4
-    _style: LogStyleEnum = DEFAULT_LOG_STYLE
+    _log_level: Optional[LogLevelEnum] = None
+    _style: Optional[LogStyleEnum] = None
     _depth: int
     _depth_list: list[DepthData]
     _increase_depth_list: list[str]
@@ -91,7 +92,10 @@ class LoggerStreamHandlerBase(ABC):
 
     def __init__(self):
         if self._log_level is None:
-            self._log_level = self.DEFAULT_LOG_LEVEL
+            self._log_level = DEFAULT_LOG_LEVEL
+
+        if self._style is None:
+            self._style = DEFAULT_LOG_STYLE
 
         if self._log_line_template is None:
             self._log_line_template = self.LOG_LINE_DEFAULT_TEMPLATE

@@ -52,7 +52,7 @@ class LoggersDebugTests(TestBase):
             LogLevelEnum.TRACE,
             f'{TEST_FILE_NAME}.{self.__class__.__name__}',
             method_name,
-            39,
+            41,
             msg_1,
             True)
 
@@ -66,7 +66,7 @@ class LoggersDebugTests(TestBase):
             LogLevelEnum.INFO,
             f'{TEST_FILE_NAME}.{self.__class__.__name__}',
             method_name,
-            40,
+            42,
             child_1,
             True)
 
