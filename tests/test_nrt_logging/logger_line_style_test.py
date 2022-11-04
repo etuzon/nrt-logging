@@ -1,3 +1,4 @@
+import os
 import unittest
 import yaml
 
@@ -5,20 +6,32 @@ from nrt_logging.log_format import LogDateFormat
 from nrt_logging.log_level import LogLevelEnum
 from nrt_logging.logger_manager import logger_manager, NrtLoggerManager
 from nrt_logging.logger_stream_handlers import \
-    ConsoleStreamHandler, LogStyleEnum, ManualDepthEnum
+    ConsoleStreamHandler, LogStyleEnum, ManualDepthEnum, FileStreamHandler
 from tests.test_nrt_logging.test_base import \
     NAME_1, stdout_redirect, r_stdout, TestBase
+
 
 TEST_FILE_NAME = 'logger_line_style_test.py'
 
 
 class NrtLoggerManagerTests(TestBase):
+    FILE_NAME_1 = 'log_line_test_1.txt'
+    FILE_PATH_1 = os.path.join(TestBase.TEMP_PATH, FILE_NAME_1)
+
+    @classmethod
+    def setUpClass(cls):
+        if not os.path.exists(cls.TEMP_PATH):
+            os.makedirs(cls.TEMP_PATH)
 
     def setUp(self):
-        logger_1 = logger_manager.get_logger(NAME_1)
+        if os.path.exists(self.FILE_PATH_1):
+            os.remove(self.FILE_PATH_1)
 
-        if logger_1:
-            logger_1.close_stream_handlers()
+        logger_manager.close_logger(NAME_1)
+
+    def tearDown(self):
+        if os.path.exists(self.FILE_PATH_1):
+            os.remove(self.FILE_PATH_1)
 
     @stdout_redirect
     def test_logger_line(self):
@@ -33,7 +46,7 @@ class NrtLoggerManagerTests(TestBase):
 
         log_list = yaml.safe_load(so)
 
-        self.assertEqual(len(log_list), 1)
+        self.assertEqual(1, len(log_list))
         log_line = log_list[0]['log']
 
         self._verify_log_line(
@@ -42,7 +55,7 @@ class NrtLoggerManagerTests(TestBase):
             LogLevelEnum.TRACE,
             f'{TEST_FILE_NAME}.{self.__class__.__name__}',
             'test_logger_line',
-            31,
+            44,
             msg)
 
     @stdout_redirect
@@ -81,7 +94,7 @@ class NrtLoggerManagerTests(TestBase):
             LogLevelEnum.WARN,
             expected_path,
             expected_method_name,
-            56,
+            69,
             msg)
 
         children = log_dict.get('children')
@@ -94,7 +107,7 @@ class NrtLoggerManagerTests(TestBase):
             LogLevelEnum.ERROR,
             expected_path,
             expected_method_name,
-            59,
+            72,
             child_msg_1)
 
         self._verify_log_line(
@@ -103,7 +116,7 @@ class NrtLoggerManagerTests(TestBase):
             LogLevelEnum.CRITICAL,
             expected_path,
             expected_method_name,
-            62,
+            75,
             child_msg_2)
 
         children_2 = children[1].get('children')
@@ -116,7 +129,7 @@ class NrtLoggerManagerTests(TestBase):
             LogLevelEnum.WARN,
             expected_path,
             expected_method_name,
-            65,
+            78,
             child_msg_3)
 
         self._verify_log_line(
@@ -125,7 +138,7 @@ class NrtLoggerManagerTests(TestBase):
             LogLevelEnum.INFO,
             expected_path,
             expected_method_name,
-            67,
+            80,
             child_msg_2)
 
     @stdout_redirect
@@ -156,7 +169,7 @@ class NrtLoggerManagerTests(TestBase):
             LogLevelEnum.WARN,
             expected_path,
             expected_method_name,
-            139,
+            152,
             msg)
 
         children = log_dict.get('children')
@@ -169,7 +182,7 @@ class NrtLoggerManagerTests(TestBase):
             LogLevelEnum.ERROR,
             expected_path,
             expected_method_name,
-            142,
+            155,
             child_msg_1)
 
     @stdout_redirect
@@ -194,7 +207,7 @@ class NrtLoggerManagerTests(TestBase):
             LogLevelEnum.INFO,
             f'{TEST_FILE_NAME}.{self.__class__.__name__}',
             'test_default_sh_parameters',
-            182,
+            195,
             msg)
 
     @stdout_redirect
@@ -221,6 +234,87 @@ class NrtLoggerManagerTests(TestBase):
 
         self.assertTrue(
             'NrtLoggerManager should not be initiated' in str(e.exception))
+
+    @stdout_redirect
+    def test_logger_log_print_less_log_level_negative(self):
+        sh = ConsoleStreamHandler()
+        sh.log_level = LogLevelEnum.TRACE
+        logger = logger_manager.get_logger(NAME_1)
+        logger.add_stream_handler(sh)
+
+        msg = 'abcd'
+
+        logger.log_level = LogLevelEnum.DEBUG
+        logger.trace(msg)
+        self.assertFalse(bool(r_stdout.getvalue()))
+
+        logger.log_level = LogLevelEnum.INFO
+        logger.debug(msg)
+        self.assertFalse(bool(r_stdout.getvalue()))
+
+        logger.update_log_level(
+            LogLevelEnum.WARN, is_update_sh=False)
+        logger.info(msg)
+        self.assertFalse(bool(r_stdout.getvalue()))
+
+        logger.log_level = LogLevelEnum.ERROR
+        logger.warn(msg)
+        self.assertFalse(bool(r_stdout.getvalue()))
+
+        logger.log_level = LogLevelEnum.CRITICAL
+        logger.error(msg)
+        self.assertFalse(bool(r_stdout.getvalue()))
+
+    @stdout_redirect
+    def test_add_stream_handler_with_is_min_sh_logger_level_false(self):
+        c_sh = ConsoleStreamHandler()
+        c_sh.log_level = LogLevelEnum.INFO
+        logger = logger_manager.get_logger(NAME_1)
+        logger.add_stream_handler(c_sh)
+
+        f_sh = FileStreamHandler(self.FILE_PATH_1)
+        f_sh.log_level = LogLevelEnum.DEBUG
+        logger.add_stream_handler(f_sh, is_min_sh_logger_level=False)
+
+        msg_1 = 'abcd'
+        msg_2 = 'efgh'
+
+        logger.debug(msg_1)
+        logger.error(msg_2)
+
+        so = r_stdout.getvalue()
+        log_list = yaml.safe_load(so)
+
+        self.assertEqual(1, len(log_list))
+
+        with open(self.FILE_PATH_1) as f:
+            file_log_list = yaml.safe_load(f.read())
+
+        self.assertEqual(1, len(file_log_list))
+
+    @stdout_redirect
+    def test_update_log_level(self):
+        c_sh = ConsoleStreamHandler()
+        c_sh.log_level = LogLevelEnum.DEBUG
+        logger = logger_manager.get_logger(NAME_1)
+        logger.add_stream_handler(c_sh, is_min_sh_logger_level=False)
+
+        msg_1 = 'abcd'
+
+        logger.debug(msg_1)
+
+        so = r_stdout.getvalue()
+        self.assertFalse(bool(so))
+
+        logger.update_log_level(
+            LogLevelEnum.DEBUG, is_update_sh=True)
+
+        logger.debug(msg_1)
+
+        so = r_stdout.getvalue()
+        log_list = yaml.safe_load(so)
+
+        self.assertEqual(1, len(log_list))
 
 
 if __name__ == '__main__':

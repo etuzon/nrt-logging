@@ -2,6 +2,8 @@ from typing import Optional
 
 import yaml
 import schema
+
+from nrt_logging.exceptions import NotImplementedCodeException
 from nrt_logging.log_format import LogElementEnum
 from nrt_logging.log_level import LogLevelEnum
 from nrt_logging.logger_stream_handlers import \
@@ -133,7 +135,7 @@ class StreamHandlerConfig(ConfigBase):
         if self.type == StreamHandlerEnum.FILE:
             return FileStreamHandler(self.file_path)
 
-        raise NotImplementedError(
+        raise NotImplementedCodeException(
             'Bug: Not implemented stream handler from config'
             f' for type [{self.type.name}]')
 

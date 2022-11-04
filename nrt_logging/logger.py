@@ -24,6 +24,15 @@ class NrtLogger:
     __is_debug: bool = False
 
     def __init__(self, log_level: LogLevelEnum = DEFAULT_LOG_LEVEL):
+        """
+        Constractor.
+
+        @param log_level:
+            Logger log_level.
+            Stream Handlers log method will be called
+            only if logger log >= log_level.
+        """
+
         self.__log_level = log_level
         self.__stream_handler_list = []
 
@@ -104,11 +113,21 @@ class NrtLogger:
     def add_stream_handler(
             self,
             stream_handler: LoggerStreamHandlerBase,
-            is_inherit_min_logger_level: bool = True):
+            is_min_sh_logger_level: bool = True):
+        """
+        Add Stream Handler.
+
+        @param stream_handler:
+        @param is_min_sh_logger_level:
+            Logger log level is minimum of
+            logger log level and stream handler log level.
+        @return:
+        """
+
         if self.is_debug:
             stream_handler.is_debug = self.is_debug
 
-        if is_inherit_min_logger_level:
+        if is_min_sh_logger_level:
             self.log_level = min(self.__log_level, stream_handler.log_level)
 
         self.__stream_handler_list.append(stream_handler)

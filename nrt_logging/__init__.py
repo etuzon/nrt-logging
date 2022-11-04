@@ -7,4 +7,4 @@ Version 1.2.0:
 
 """
 
-__version__ = '1.2.0dev1'
+__version__ = '1.2.0dev2'

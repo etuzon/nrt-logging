@@ -287,7 +287,8 @@ class LoggerStreamHandlerBase(ABC):
             return \
                 self.YAML_DOCUMENT_SEPARATOR \
                 + self.__create_yaml_elements_str(msg, log_level, False)
-        elif self.style == LogStyleEnum.LINE:
+
+        if self.style == LogStyleEnum.LINE:
             return self.__create_line_element_str(msg, log_level, False)
 
         raise NotImplementedCodeException()
@@ -365,8 +366,9 @@ class LoggerStreamHandlerBase(ABC):
                 expected_parent_fm_name, parent_stack_list):
             self.__update_depth_for_increased_child_depth(fm_name)
             return True
+
         # In case the log is in the same method of previous log
-        elif self.__is_child_in_previous_child_depth(
+        if self.__is_child_in_previous_child_depth(
                 expected_parent_fm_name, stack_list):
             is_child = \
                 self.__update_depth_for_change_in_manual_depth(

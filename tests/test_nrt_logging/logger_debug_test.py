@@ -18,14 +18,13 @@ class LoggersDebugTests(TestBase):
 
     # skipcq: PYL-R0201
     def setUp(self):
-        logger_1 = logger_manager.get_logger(NAME_1)
-
-        if logger_1:
-            logger_1.close_stream_handlers()
+        logger_manager.close_logger(NAME_1)
 
     # skipcq: PYL-R0201
     def tearDown(self):
         logger_manager.is_debug = False
+
+        logger_manager.close_logger(NAME_1)
 
     @stdout_redirect
     def test_debug_in_logger_manager_with_line_style(self):
@@ -52,7 +51,7 @@ class LoggersDebugTests(TestBase):
             LogLevelEnum.TRACE,
             f'{TEST_FILE_NAME}.{self.__class__.__name__}',
             method_name,
-            41,
+            40,
             msg_1,
             True)
 
@@ -66,7 +65,7 @@ class LoggersDebugTests(TestBase):
             LogLevelEnum.INFO,
             f'{TEST_FILE_NAME}.{self.__class__.__name__}',
             method_name,
-            42,
+            41,
             child_1,
             True)
 
