@@ -36,6 +36,8 @@ class LoggerManagerConfigTests(TestBase):
         'logging_config_yaml_without_stream_handlers.yaml'
     LOGGER_YAML_SAME_LOGGER_FILE_NAME = \
         'logging_config_yaml_same_logger.yaml'
+    LOGGER_LINE_SAME_SH_IN_MULTIPLE_LOGGERS_FILE_NAME = \
+        'logging_config_line_same_sh_in_multiple_loggers.yaml'
 
     MULTI_SH_NO_INHERITANCE_FILE_PATH = \
         os.path.join(BASELINE_PATH, MULTI_SH_NO_INHERITANCE_FILE_NAME)
@@ -67,6 +69,10 @@ class LoggerManagerConfigTests(TestBase):
         os.path.join(
             BASELINE_PATH,
             LOGGER_YAML_SAME_LOGGER_FILE_NAME)
+    LOGGER_LINE_SAME_SH_IN_MULTIPLE_LOGGERS_FILE_PATH = \
+        os.path.join(
+            BASELINE_PATH,
+            LOGGER_LINE_SAME_SH_IN_MULTIPLE_LOGGERS_FILE_NAME)
 
     FILE_NAME_1 = 'log_test_1.txt'
     FILE_NAME_2 = 'log_test_2.txt'
@@ -393,7 +399,7 @@ class LoggerManagerConfigTests(TestBase):
             LogLevelEnum.DEBUG,
             self.expected_class_path,
             'test_recreate_logger_yaml',
-            351,
+            357,
             msg_1)
         self.__verify_log_yaml(
             yaml_list[1],
@@ -401,7 +407,7 @@ class LoggerManagerConfigTests(TestBase):
             LogLevelEnum.INFO,
             self.expected_class_path,
             'test_recreate_logger_yaml',
-            358,
+            364,
             msg_2)
 
         self.__verify_log_yaml(
@@ -410,7 +416,7 @@ class LoggerManagerConfigTests(TestBase):
             LogLevelEnum.INFO,
             self.expected_class_path,
             'test_recreate_logger_yaml',
-            365,
+            371,
             msg_1)
 
         children = yaml_list[2].get('children')
@@ -422,7 +428,7 @@ class LoggerManagerConfigTests(TestBase):
             LogLevelEnum.INFO,
             self.expected_class_path,
             'test_recreate_logger_yaml',
-            366,
+            372,
             child_1)
 
         children = child.get('children')
@@ -434,7 +440,7 @@ class LoggerManagerConfigTests(TestBase):
             LogLevelEnum.INFO,
             self.expected_class_path,
             'test_recreate_logger_yaml',
-            367,
+            373,
             child_2)
 
         children = child.get('children')
@@ -446,7 +452,7 @@ class LoggerManagerConfigTests(TestBase):
             LogLevelEnum.INFO,
             self.expected_class_path,
             'test_recreate_logger_yaml',
-            368,
+            374,
             child_1)
         child = children[1]
         self.__verify_log_yaml(
@@ -455,7 +461,7 @@ class LoggerManagerConfigTests(TestBase):
             LogLevelEnum.INFO,
             self.expected_class_path,
             'test_recreate_logger_yaml',
-            369,
+            375,
             child_2)
 
         self.__verify_log_yaml(
@@ -464,7 +470,7 @@ class LoggerManagerConfigTests(TestBase):
             LogLevelEnum.INFO,
             self.expected_class_path,
             'test_recreate_logger_yaml',
-            375,
+            381,
             msg_2)
 
         children = yaml_list[3].get('children')
@@ -476,7 +482,7 @@ class LoggerManagerConfigTests(TestBase):
             LogLevelEnum.INFO,
             self.expected_class_path,
             'test_recreate_logger_yaml',
-            376,
+            382,
             child_2)
 
     def test_config_logger_with_invalid_log_level_negative(self):
@@ -549,6 +555,32 @@ class LoggerManagerConfigTests(TestBase):
 
         with self.assertRaises(ValueError):
             logger_manager.set_config(config=config_dict)
+
+    @stdout_redirect
+    def test_same_sh_in_multiple_loggers(self):
+        msg_1 = 'msg_1'
+        msg_2 = 'msg_2'
+        msg_3 = 'msg_3'
+
+        logger_manager.set_config(
+            file_path=self.LOGGER_LINE_SAME_SH_IN_MULTIPLE_LOGGERS_FILE_PATH)
+
+        logger_1 = logger_manager.get_logger(self.LOGGER_NAME_1)
+        logger_2 = logger_manager.get_logger(self.LOGGER_NAME_2)
+
+        logger_1.info(msg_1)
+        logger_1.debug(msg_2)
+        logger_2.debug(msg_3)
+
+        console_log_list = yaml.safe_load(r_stdout.getvalue())
+
+        self.assertEqual(2, len(console_log_list))
+
+        self.assertTrue(LogLevelEnum.INFO.name in console_log_list[0]['log'])
+        self.assertTrue(msg_1 in console_log_list[0]['log'])
+
+        self.assertTrue(LogLevelEnum.DEBUG.name in console_log_list[1]['log'])
+        self.assertTrue(msg_3 in console_log_list[1]['log'])
 
     def __verify_log_yaml(
             self,

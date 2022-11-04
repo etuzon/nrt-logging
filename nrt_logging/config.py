@@ -116,14 +116,17 @@ class ConfigBase:
 
 
 class StreamHandlerConfig(ConfigBase):
+    STREAM_HANDLER_NAME = 'name'
     TYPE = 'type'
     FILE_PATH = 'file_path'
 
+    __name: Optional[str] = None
     __type: Optional[StreamHandlerEnum] = None
     __file_path: Optional[str] = None
 
     def __init__(self, config: dict, is_parent_debug: bool):
         super().__init__(config, is_parent_debug)
+        self.__update_stream_handler_name()
         self.__update_type()
         self._update_log_element_list()
         self.__update_file_path()
@@ -138,6 +141,10 @@ class StreamHandlerConfig(ConfigBase):
         raise NotImplementedCodeException(
             'Bug: Not implemented stream handler from config'
             f' for type [{self.type.name}]')
+
+    @property
+    def name(self) -> str:
+        return self.__name
 
     @property
     def type(self) -> StreamHandlerEnum:
@@ -160,6 +167,9 @@ class StreamHandlerConfig(ConfigBase):
             raise ValueError(
                 f'{self.TYPE} value [{sh_type}]'
                 f' in stream handler in log config is invalid')
+
+    def __update_stream_handler_name(self):
+        self.__name = self._config.get(self.STREAM_HANDLER_NAME)
 
     def __update_file_path(self):
         file_path = self._config.get(self.FILE_PATH)
@@ -289,6 +299,9 @@ class LoggerManagerConfig(ConfigBase):
                         LoggerConfig.STREAM_HANDLERS: [
                             {
                                 StreamHandlerConfig.TYPE: str,
+                                schema.Optional(
+                                    StreamHandlerConfig
+                                    .STREAM_HANDLER_NAME): str,
                                 schema.Optional(
                                     StreamHandlerConfig.FILE_PATH): str,
                                 schema.Optional(cls.DEBUG): bool,

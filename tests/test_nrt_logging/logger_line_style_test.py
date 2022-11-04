@@ -8,8 +8,7 @@ from nrt_logging.logger_manager import logger_manager, NrtLoggerManager
 from nrt_logging.logger_stream_handlers import \
     ConsoleStreamHandler, LogStyleEnum, ManualDepthEnum, FileStreamHandler
 from tests.test_nrt_logging.test_base import \
-    NAME_1, stdout_redirect, r_stdout, TestBase
-
+    NAME_1, stdout_redirect, r_stdout, TestBase, NAME_2
 
 TEST_FILE_NAME = 'logger_line_style_test.py'
 
@@ -24,14 +23,10 @@ class NrtLoggerManagerTests(TestBase):
             os.makedirs(cls.TEMP_PATH)
 
     def setUp(self):
-        if os.path.exists(self.FILE_PATH_1):
-            os.remove(self.FILE_PATH_1)
-
-        logger_manager.close_logger(NAME_1)
+        self.__clean_setup()
 
     def tearDown(self):
-        if os.path.exists(self.FILE_PATH_1):
-            os.remove(self.FILE_PATH_1)
+        self.__clean_setup()
 
     @stdout_redirect
     def test_logger_line(self):
@@ -55,7 +50,7 @@ class NrtLoggerManagerTests(TestBase):
             LogLevelEnum.TRACE,
             f'{TEST_FILE_NAME}.{self.__class__.__name__}',
             'test_logger_line',
-            44,
+            39,
             msg)
 
     @stdout_redirect
@@ -94,7 +89,7 @@ class NrtLoggerManagerTests(TestBase):
             LogLevelEnum.WARN,
             expected_path,
             expected_method_name,
-            69,
+            64,
             msg)
 
         children = log_dict.get('children')
@@ -107,7 +102,7 @@ class NrtLoggerManagerTests(TestBase):
             LogLevelEnum.ERROR,
             expected_path,
             expected_method_name,
-            72,
+            67,
             child_msg_1)
 
         self._verify_log_line(
@@ -116,7 +111,7 @@ class NrtLoggerManagerTests(TestBase):
             LogLevelEnum.CRITICAL,
             expected_path,
             expected_method_name,
-            75,
+            70,
             child_msg_2)
 
         children_2 = children[1].get('children')
@@ -129,7 +124,7 @@ class NrtLoggerManagerTests(TestBase):
             LogLevelEnum.WARN,
             expected_path,
             expected_method_name,
-            78,
+            73,
             child_msg_3)
 
         self._verify_log_line(
@@ -138,7 +133,7 @@ class NrtLoggerManagerTests(TestBase):
             LogLevelEnum.INFO,
             expected_path,
             expected_method_name,
-            80,
+            75,
             child_msg_2)
 
     @stdout_redirect
@@ -169,7 +164,7 @@ class NrtLoggerManagerTests(TestBase):
             LogLevelEnum.WARN,
             expected_path,
             expected_method_name,
-            152,
+            147,
             msg)
 
         children = log_dict.get('children')
@@ -182,7 +177,7 @@ class NrtLoggerManagerTests(TestBase):
             LogLevelEnum.ERROR,
             expected_path,
             expected_method_name,
-            155,
+            150,
             child_msg_1)
 
     @stdout_redirect
@@ -207,7 +202,7 @@ class NrtLoggerManagerTests(TestBase):
             LogLevelEnum.INFO,
             f'{TEST_FILE_NAME}.{self.__class__.__name__}',
             'test_default_sh_parameters',
-            195,
+            190,
             msg)
 
     @stdout_redirect
@@ -315,6 +310,47 @@ class NrtLoggerManagerTests(TestBase):
         log_list = yaml.safe_load(so)
 
         self.assertEqual(1, len(log_list))
+
+    @stdout_redirect
+    def test_same_sh_in_multiple_loggers(self):
+        msg_1 = 'msg_1'
+        msg_2 = 'msg_2'
+        msg_3 = 'msg_3'
+
+        c_sh = ConsoleStreamHandler()
+        c_sh.log_level = LogLevelEnum.DEBUG
+        c_sh.set_log_style(LogStyleEnum.LINE)
+        c_sh.log_line_template = 'Test $log_level$ $message$'
+
+        logger_1 = logger_manager.get_logger(NAME_1)
+        logger_2 = logger_manager.get_logger(NAME_2)
+
+        logger_1.log_level = LogLevelEnum.INFO
+        logger_2.log_level = LogLevelEnum.DEBUG
+
+        logger_1.add_stream_handler(c_sh, is_min_sh_logger_level=False)
+        logger_2.add_stream_handler(c_sh, is_min_sh_logger_level=False)
+
+        logger_1.info(msg_1)
+        logger_1.debug(msg_2)
+        logger_2.debug(msg_3)
+
+        console_log_list = yaml.safe_load(r_stdout.getvalue())
+
+        self.assertEqual(2, len(console_log_list))
+
+        self.assertTrue(LogLevelEnum.INFO.name in console_log_list[0]['log'])
+        self.assertTrue(msg_1 in console_log_list[0]['log'])
+
+        self.assertTrue(LogLevelEnum.DEBUG.name in console_log_list[1]['log'])
+        self.assertTrue(msg_3 in console_log_list[1]['log'])
+
+    def __clean_setup(self):
+        if os.path.exists(self.FILE_PATH_1):
+            os.remove(self.FILE_PATH_1)
+
+        logger_manager.close_logger(NAME_1)
+        logger_manager.close_logger(NAME_2)
 
 
 if __name__ == '__main__':

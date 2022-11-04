@@ -81,6 +81,7 @@ class LoggerStreamHandlerBase(ABC):
     _stack_log_start_index: int = 4
     _log_level: Optional[LogLevelEnum] = None
     _style: Optional[LogStyleEnum] = None
+    _name: Optional[str] = None
     _depth: int
     _depth_list: list[DepthData]
     _increase_depth_list: list[str]
@@ -183,6 +184,14 @@ class LoggerStreamHandlerBase(ABC):
                 return fm_depth
 
         return None
+
+    @property
+    def name(self) -> str:
+        return self._name
+
+    @name.setter
+    def name(self, name: str):
+        self._name = name
 
     @property
     def style(self) -> LogStyleEnum:
