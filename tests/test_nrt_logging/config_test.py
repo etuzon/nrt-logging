@@ -2,8 +2,9 @@ import os
 import unittest
 
 import yaml
+from parameterized import parameterized
 
-from nrt_logging.config import StreamHandlerConfig
+from nrt_logging.config import StreamHandlerConfig, FileSizeEnum
 from nrt_logging.log_format import LogElementEnum
 from nrt_logging.log_level import LogLevelEnum
 from nrt_logging.logger_manager import logger_manager
@@ -399,7 +400,7 @@ class LoggerManagerConfigTests(TestBase):
             LogLevelEnum.DEBUG,
             self.expected_class_path,
             'test_recreate_logger_yaml',
-            357,
+            358,
             msg_1)
         self.__verify_log_yaml(
             yaml_list[1],
@@ -407,7 +408,7 @@ class LoggerManagerConfigTests(TestBase):
             LogLevelEnum.INFO,
             self.expected_class_path,
             'test_recreate_logger_yaml',
-            364,
+            365,
             msg_2)
 
         self.__verify_log_yaml(
@@ -416,7 +417,7 @@ class LoggerManagerConfigTests(TestBase):
             LogLevelEnum.INFO,
             self.expected_class_path,
             'test_recreate_logger_yaml',
-            371,
+            372,
             msg_1)
 
         children = yaml_list[2].get('children')
@@ -428,7 +429,7 @@ class LoggerManagerConfigTests(TestBase):
             LogLevelEnum.INFO,
             self.expected_class_path,
             'test_recreate_logger_yaml',
-            372,
+            373,
             child_1)
 
         children = child.get('children')
@@ -440,7 +441,7 @@ class LoggerManagerConfigTests(TestBase):
             LogLevelEnum.INFO,
             self.expected_class_path,
             'test_recreate_logger_yaml',
-            373,
+            374,
             child_2)
 
         children = child.get('children')
@@ -452,7 +453,7 @@ class LoggerManagerConfigTests(TestBase):
             LogLevelEnum.INFO,
             self.expected_class_path,
             'test_recreate_logger_yaml',
-            374,
+            375,
             child_1)
         child = children[1]
         self.__verify_log_yaml(
@@ -461,7 +462,7 @@ class LoggerManagerConfigTests(TestBase):
             LogLevelEnum.INFO,
             self.expected_class_path,
             'test_recreate_logger_yaml',
-            375,
+            376,
             child_2)
 
         self.__verify_log_yaml(
@@ -470,7 +471,7 @@ class LoggerManagerConfigTests(TestBase):
             LogLevelEnum.INFO,
             self.expected_class_path,
             'test_recreate_logger_yaml',
-            381,
+            382,
             msg_2)
 
         children = yaml_list[3].get('children')
@@ -482,7 +483,7 @@ class LoggerManagerConfigTests(TestBase):
             LogLevelEnum.INFO,
             self.expected_class_path,
             'test_recreate_logger_yaml',
-            382,
+            383,
             child_2)
 
     def test_config_logger_with_invalid_log_level_negative(self):
@@ -638,6 +639,52 @@ class StreamHandlerConfigTests(TestBase):
 
         with self.assertRaises(ValueError, msg=''):
             StreamHandlerConfig(stream_handler_dict, False)
+
+
+class FileSizeEnumTests(TestBase):
+
+    @parameterized.expand([
+        [FileSizeEnum.B, 1],
+        [FileSizeEnum.KB, 10 ** 3],
+        [FileSizeEnum.MB, 10 ** 6],
+        [FileSizeEnum.GB, 10 ** 9],
+        [FileSizeEnum.TB, 10 ** 12],
+    ])
+    def test_bytes(self, file_size_enum: FileSizeEnum, expected_size):
+        self.assertEqual(expected_size, file_size_enum.bytes)
+
+    @parameterized.expand([
+        ['B', FileSizeEnum.B],
+        ['kb', FileSizeEnum.KB],
+        ['mB', FileSizeEnum.MB],
+        ['Gb', FileSizeEnum.GB],
+        ['TB', FileSizeEnum.TB],
+    ])
+    def test_build(
+            self, size_str: str, expected_file_size_enum: FileSizeEnum):
+        self.assertEqual(
+            expected_file_size_enum, FileSizeEnum.build(size_str))
+
+    @parameterized.expand([
+        [''], ['k'], ['dd'], ['12'], ['qwer']
+    ])
+    def test_build_negative(self, value: str):
+        with self.assertRaises(ValueError):
+            FileSizeEnum.build(value)
+
+    @parameterized.expand([
+        ['10 gb', 10 * 1000 * 1000 * 1000],
+        ['5gb', 5 * 1000 * 1000 * 1000],
+        ['8 B', 8],
+        ['234b', 234],
+        ['134 Kb', 134 * 1000],
+        ['44TB', 44 * 1000 * 1000 * 1000 * 1000],
+        ['3 MB', 3 * 1000 * 1000],
+        ['50mB', 50 * 1000 * 1000]
+    ])
+    def test_get_bytes(self, file_size_str: str, expected_bytes: int):
+        self.assertEqual(
+            expected_bytes, FileSizeEnum.get_bytes(file_size_str))
 
 
 if __name__ == '__main__':

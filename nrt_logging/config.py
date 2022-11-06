@@ -1,3 +1,4 @@
+from enum import Enum
 from typing import Optional
 
 import yaml
@@ -11,19 +12,111 @@ from nrt_logging.logger_stream_handlers import \
     FileStreamHandler, LoggerStreamHandlerBase
 
 
+class FileSizeEnum(Enum):
+    B = 1
+    KB = 10 ** 3
+    MB = 10 ** 6
+    GB = 10 ** 9
+    TB = 10 ** 12
+
+    @property
+    def bytes(self) -> int:
+        return self._value_
+
+    @classmethod
+    def build(cls, name: str):
+        name_u = name.upper()
+
+        for file_size_enum in cls:
+            if name_u == file_size_enum.name:
+                return file_size_enum
+
+        raise ValueError(f'[{name}] is not valid file size name')
+
+    @classmethod
+    def get_bytes(cls, file_size_str: str) -> int:
+        if ' ' in file_size_str:
+            return cls.__get_bytes_for_str_with_space(file_size_str)
+
+        return cls.__get_bytes_for_str_without_space(file_size_str)
+
+    @classmethod
+    def __get_bytes_for_str_with_space(cls, file_size_str: str) -> int:
+        file_size_split = file_size_str.split(' ')
+
+        if len(file_size_split) != 2:
+            raise ValueError(
+                f'File size [{file_size_str}] is with invalid syntax')
+
+        num = int(file_size_split[0])
+
+        if num <= 0:
+            raise ValueError(
+                f'File size [{file_size_str}] has invalid syntax')
+
+        return num * cls.build(file_size_split[1]).bytes
+
+    @classmethod
+    def __get_bytes_for_str_without_space(cls, file_size_str: str) -> int:
+        if len(file_size_str) > 2:
+            try:
+                file_size = FileSizeEnum.build(file_size_str[-2:])
+                num = cls.__num_str_to_int(
+                    file_size_str[:-2], file_size_str)
+                return num * file_size.bytes
+            except ValueError:
+                pass
+
+        if len(file_size_str) >= 2:
+            file_size = FileSizeEnum.build(file_size_str[-1:])
+            num = cls.__num_str_to_int(
+                file_size_str[:-1], file_size_str)
+            return num * file_size.bytes
+
+        raise ValueError(
+            f'File size [{file_size_str}] has invalid syntax')
+
+    @classmethod
+    def __num_str_to_int(cls, num_str: str, s: str):
+        if not num_str.isnumeric():
+            raise ValueError(f'File size [{s}] has invalid syntax')
+
+        num = int(num_str)
+
+        if num <= 0:
+            raise ValueError(f'File size [{s}] has invalid syntax')
+
+        return num
+
+
 class ConfigBase:
+    FILE_SIZE_UNIT = \
+        {'B': 1, 'KB': 10 ** 3, 'MB': 10 ** 6, 'GB': 10 ** 9, 'TB': 10 ** 12}
+
+    DEFAULT_FILE_SIZE_LIMITATION = 10 * FileSizeEnum.MB.bytes
+    DEFAULT_FILES_AMOUNT = 10
+
     DEBUG = 'debug'
     LOG_LEVEL = 'log_level'
     STYLE = 'style'
     DATE_FORMAT = 'date_format'
     LOG_LINE_TEMPLATE = 'log_line_template'
     LOG_YAML_ELEMENTS = 'log_yaml_elements'
+    IS_LIMIT_FILE_SIZE = 'limit_file_size'
+    FILE_SIZE_LIMITATION = 'file_size'
+    FILES_AMOUNT = 'files_amount'
+    IS_ZIP = 'zip'
 
     _log_level: Optional[LogLevelEnum] = None
     _style: Optional[LogStyleEnum] = None
     _date_format: Optional[str] = None
     _log_line_template: Optional[str] = None
     _log_yaml_elements: Optional[list[LogElementEnum]] = None
+
+    _is_limit_file_size: bool = False
+    _file_size_limitation: int = DEFAULT_FILE_SIZE_LIMITATION
+    _files_amount: int = DEFAULT_FILES_AMOUNT
+    _is_zip: bool = False
 
     _config: Optional[dict] = None
 
@@ -36,6 +129,10 @@ class ConfigBase:
         self._update_log_style()
         self._update_date_format()
         self._update_log_line_template()
+        self._update_is_limit_file_size()
+        self._update_file_size_limitation()
+        self._update_files_amount()
+        self._update_is_zip()
 
     @property
     def log_level(self) -> LogLevelEnum:
@@ -56,6 +153,22 @@ class ConfigBase:
     @property
     def log_yaml_elements(self) -> Optional[list[LogElementEnum]]:
         return self._log_yaml_elements
+
+    @property
+    def is_limit_file_size(self) -> bool:
+        return self._is_limit_file_size
+
+    @property
+    def file_size_limitation(self) -> int:
+        return self._file_size_limitation
+
+    @property
+    def files_amount(self) -> int:
+        return self._files_amount
+
+    @property
+    def is_zip(self) -> bool:
+        return self._is_zip
 
     @property
     def is_debug(self) -> bool:
@@ -109,10 +222,36 @@ class ConfigBase:
                     log_element_enum_list.append(log_element_enum)
                 except ValueError:
                     raise ValueError(
-                        f'Element [{log_element_str}]'
+                        f'Element [{log_element_str}] in logger config file'
                         f' is not valid YAML log element name')
 
             self._log_yaml_elements = log_element_enum_list
+
+    def _update_is_limit_file_size(self):
+        self._is_limit_file_size = \
+            bool(self._config.get(self.IS_LIMIT_FILE_SIZE))
+
+    def _update_file_size_limitation(self):
+        file_size_str = self._config.get(self.FILE_SIZE_LIMITATION)
+
+        if file_size_str:
+            self._file_size_limitation = FileSizeEnum.get_bytes(file_size_str)
+
+    def _update_files_amount(self):
+        files_amount_str = self._config.get(self.FILES_AMOUNT)
+
+        if files_amount_str is not None:
+            self._files_amount = int(files_amount_str)
+
+            if self._files_amount < 0:
+                raise ValueError(
+                    'Files amount in logger confile file cannot be negative')
+
+    def _update_is_zip(self):
+        is_zip = self._config.get(self.IS_ZIP)
+
+        if is_zip is not None:
+            self._is_zip = is_zip
 
 
 class StreamHandlerConfig(ConfigBase):
@@ -287,6 +426,11 @@ class LoggerManagerConfig(ConfigBase):
                 schema.Optional(cls.DATE_FORMAT): str,
                 schema.Optional(cls.LOG_LINE_TEMPLATE): str,
                 schema.Optional(cls.LOG_YAML_ELEMENTS): list,
+                schema.Optional(StreamHandlerConfig.IS_LIMIT_FILE_SIZE): bool,
+                schema.Optional(
+                    StreamHandlerConfig.FILE_SIZE_LIMITATION): str,
+                schema.Optional(StreamHandlerConfig.FILES_AMOUNT): int,
+                schema.Optional(StreamHandlerConfig.IS_ZIP): bool,
                 cls.LOGGERS_CONFIG: [
                     {
                         LoggerConfig.LOGGER_NAME: str,
@@ -296,6 +440,13 @@ class LoggerManagerConfig(ConfigBase):
                         schema.Optional(cls.DATE_FORMAT): str,
                         schema.Optional(cls.LOG_LINE_TEMPLATE): str,
                         schema.Optional(cls.LOG_YAML_ELEMENTS): list[str],
+                        schema.Optional(
+                            StreamHandlerConfig.IS_LIMIT_FILE_SIZE): bool,
+                        schema.Optional(
+                            StreamHandlerConfig.FILE_SIZE_LIMITATION): str,
+                        schema.Optional(
+                            StreamHandlerConfig.FILES_AMOUNT): int,
+                        schema.Optional(StreamHandlerConfig.IS_ZIP): bool,
                         LoggerConfig.STREAM_HANDLERS: [
                             {
                                 StreamHandlerConfig.TYPE: str,
@@ -304,6 +455,16 @@ class LoggerManagerConfig(ConfigBase):
                                     .STREAM_HANDLER_NAME): str,
                                 schema.Optional(
                                     StreamHandlerConfig.FILE_PATH): str,
+                                schema.Optional(
+                                    StreamHandlerConfig
+                                    .IS_LIMIT_FILE_SIZE): bool,
+                                schema.Optional(
+                                    StreamHandlerConfig
+                                    .FILE_SIZE_LIMITATION): str,
+                                schema.Optional(
+                                    StreamHandlerConfig.FILES_AMOUNT): int,
+                                schema.Optional(
+                                    StreamHandlerConfig.IS_ZIP): bool,
                                 schema.Optional(cls.DEBUG): bool,
                                 schema.Optional(cls.LOG_LEVEL): str,
                                 schema.Optional(cls.STYLE): str,

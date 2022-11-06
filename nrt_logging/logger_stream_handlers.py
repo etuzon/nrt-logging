@@ -5,7 +5,7 @@ from dataclasses import dataclass
 from datetime import datetime
 from threading import Lock
 from enum import Enum
-from inspect import stack
+from inspect import stack, FrameInfo
 from typing import IO, Optional, Union
 
 from nrt_logging.exceptions import NotImplementedCodeException
@@ -64,6 +64,8 @@ class LoggerStreamHandlerBase(ABC):
     YAML_CHILDREN_SPACES_SEPARATOR = ' ' * 4
     YAML_DOCUMENT_SEPARATOR = '---'
 
+    _STACK_LOG_START_INDEX = 4
+
     LOG_LINE_DEFAULT_TEMPLATE = \
         f'{LogElementEnum.DATE.line_format}' \
         f' [{LogElementEnum.LOG_LEVEL.line_format}]'\
@@ -78,7 +80,9 @@ class LoggerStreamHandlerBase(ABC):
     _stream: Optional[IO] = None
 
     _lock: Lock
-    _stack_log_start_index: int = 4
+    _stack_log_start_index: int = _STACK_LOG_START_INDEX
+    _stack_log_increase_decrease_start_index: int = \
+        _STACK_LOG_START_INDEX - 1
     _log_level: Optional[LogLevelEnum] = None
     _style: Optional[LogStyleEnum] = None
     _name: Optional[str] = None
@@ -156,15 +160,21 @@ class LoggerStreamHandlerBase(ABC):
         raise NotImplementedCodeException
 
     def increase_depth(self):
-        stack_list = self.__get_stack_list(start_index=3)
-        self._increase_depth_list.append(stack_list[0])
+        stack_str_list, _ = \
+            self.__get_stack_list(
+                start_index=self._stack_log_increase_decrease_start_index)
+
+        self._increase_depth_list.append(stack_str_list[0])
 
     def decrease_depth(self, level: int = 1):
         if level < 1:
             return
 
-        stack_list = self.__get_stack_list(start_index=3)
-        fm_name = stack_list[0]
+        stack_str_list, _ = \
+            self.__get_stack_list(
+                start_index=self._stack_log_increase_decrease_start_index)
+
+        fm_name = stack_str_list[0]
         drop_list = []
 
         for i, depth in enumerate(reversed(self._depth_list)):
@@ -176,7 +186,7 @@ class LoggerStreamHandlerBase(ABC):
         for drop_index in drop_list:
             self._depth_list.pop(drop_index)
 
-        self._decrease_depth_list.append(stack_list[0])
+        self._decrease_depth_list.append(fm_name)
 
     def get_latest_fm_depth(self, fm_name: str) -> Optional[DepthData]:
         for fm_depth in reversed(self._depth_list):
@@ -252,29 +262,41 @@ class LoggerStreamHandlerBase(ABC):
             manual_depth: ManualDepthEnum = ManualDepthEnum.NO_CHANGE):
 
         if log_level >= self.log_level:
-            stack_list = \
+            stack_str_list, stack_list = \
                 self.__get_stack_list(start_index=self._stack_log_start_index)
 
             if self.is_debug:
                 msg += \
-                    '\nNRT-Logging DEBUG:\n' + '\n'.join(stack_list)
+                    '\nNRT-Logging DEBUG:\n' + '\n'.join(stack_str_list)
 
             manual_depth = \
-                self.__update_manual_depth(stack_list[0], manual_depth)
+                self.__update_manual_depth(stack_str_list[0], manual_depth)
 
-            if self._depth_list:
-                log_str = \
-                    self.__create_log_str_on_depth_plus(
-                        msg, log_level, stack_list, manual_depth)
-            else:
-                log_str = \
-                    self.__create_log_str_on_depth_0(
-                        msg, log_level, stack_list)
+            log_str = \
+                self.__create_log_str(
+                    msg, log_level, stack_str_list, stack_list, manual_depth)
 
             self.__write(f'{log_str}\n')
 
+    def __create_log_str(
+            self,
+            msg: str,
+            log_level: LogLevelEnum,
+            stack_str_list: list[str],
+            stack_list: list[FrameInfo],
+            manual_depth: ManualDepthEnum):
+        if self._depth_list:
+            return \
+                self.__create_log_str_on_depth_plus(
+                    msg, log_level, stack_str_list, stack_list, manual_depth)
+
+        return \
+            self.__create_log_str_on_depth_0(
+                msg, log_level, stack_str_list, stack_list)
+
     def __update_manual_depth(
             self, fm_name: str, manual_depth: ManualDepthEnum):
+
         if manual_depth == ManualDepthEnum.NO_CHANGE \
                 and fm_name in self._increase_depth_list:
             self._increase_depth_list.remove(fm_name)
@@ -286,19 +308,22 @@ class LoggerStreamHandlerBase(ABC):
             self,
             msg: str,
             log_level: LogLevelEnum,
-            stack_list: list[str]) -> str:
+            stack_str_list: list[str],
+            stack_list: list[FrameInfo]) -> str:
 
-        fm_name = stack_list[0]
+        fm_name = stack_str_list[0]
 
         self._depth_list.append(DepthData(name=fm_name))
 
         if self.style == LogStyleEnum.YAML:
             return \
                 self.YAML_DOCUMENT_SEPARATOR \
-                + self.__create_yaml_elements_str(msg, log_level, False)
+                + self.__create_yaml_elements_str(
+                    msg, log_level, False, stack_list)
 
         if self.style == LogStyleEnum.LINE:
-            return self.__create_line_element_str(msg, log_level, False)
+            return self.__create_line_element_str(
+                msg, log_level, False, stack_list)
 
         raise NotImplementedCodeException()
 
@@ -306,51 +331,63 @@ class LoggerStreamHandlerBase(ABC):
             self,
             msg: str,
             log_level: LogLevelEnum,
-            stack_list: list[str],
+            stack_str_list: list[str],
+            stack_list: list[FrameInfo],
             manual_depth: ManualDepthEnum):
 
-        fm_name = stack_list[0]
-        parent_stack_list = stack_list[1:]
+        fm_name = stack_str_list[0]
+        parent_stack_list = stack_str_list[1:]
         expected_parent_fm_name = self._depth_list[-1].name
 
         is_child = \
             self.__update_depth(
                 fm_name,
-                stack_list,
+                stack_str_list,
                 expected_parent_fm_name,
                 parent_stack_list,
                 manual_depth)
 
-        log_str = ''
+        return \
+            self.__create_log_str_prefix(is_child) \
+            + self.__create_log_str_suffix(
+                msg, log_level, is_child, stack_list)
 
-        if is_child:
-            depth_4_spaces = \
-                ''.join(
-                    [
-                        self.YAML_CHILDREN_SPACES_SEPARATOR
-                        for _ in range(self._depth - 1)
-                    ])
-            if self.style == LogStyleEnum.YAML:
-                log_str = f'{depth_4_spaces}children:'
-            elif self.style == LogStyleEnum.LINE:
-                log_str = \
-                    f'{self.YAML_SPACES_SEPARATOR}{depth_4_spaces}children:'
-            else:
-                raise NotImplementedCodeException()
-
-        elif self._depth == 0 and self.style == LogStyleEnum.YAML:
-            log_str = f'{self.YAML_DOCUMENT_SEPARATOR}'
+    def __create_log_str_suffix(
+            self, msg: str,
+            log_level: LogLevelEnum,
+            is_child: bool,
+            stack_list: list[FrameInfo]):
 
         if self.style == LogStyleEnum.YAML:
-            log_str += \
-                self.__create_yaml_elements_str(msg, log_level, is_child)
+            return self.__create_yaml_elements_str(
+                msg, log_level, is_child, stack_list)
         elif self.style == LogStyleEnum.LINE:
-            log_str += \
-                f'{self.__create_line_element_str(msg, log_level, is_child)}'
-        else:
-            raise NotImplementedCodeException()
+            return self.__create_line_element_str(
+                msg, log_level, is_child, stack_list)
 
-        return log_str
+        raise NotImplementedCodeException()
+
+    def __create_log_str_prefix(self, is_child: bool):
+        if is_child:
+            return self.__create_prefix_log_str_for_child()
+        elif self._depth == 0 and self.style == LogStyleEnum.YAML:
+            return f'{self.YAML_DOCUMENT_SEPARATOR}'
+
+        return ''
+
+    def __create_prefix_log_str_for_child(self):
+        depth_4_spaces = \
+            ''.join(
+                [
+                    self.YAML_CHILDREN_SPACES_SEPARATOR
+                    for _ in range(self._depth - 1)
+                ])
+        if self.style == LogStyleEnum.YAML:
+            return f'{depth_4_spaces}children:'
+        elif self.style == LogStyleEnum.LINE:
+            return f'{self.YAML_SPACES_SEPARATOR}{depth_4_spaces}children:'
+
+        raise NotImplementedCodeException()
 
     def __update_depth(
             self,
@@ -422,18 +459,27 @@ class LoggerStreamHandlerBase(ABC):
         self._stream.write(s)
         self._lock.release()
 
-    def __get_stack_list(self, start_index: int = 3) -> list[str]:
-        stack_list = []
+    def __get_stack_list(
+            self,
+            start_index: int = _STACK_LOG_START_INDEX) \
+            -> (list[str], list[FrameInfo]):
 
-        for sf in stack()[start_index:]:
+        stack_str_list = []
+        stack_list = stack()[start_index:]
+
+        for sf in stack_list:
             path, method, _ = \
                 self.__get_log_path_method_and_line_number_from_sf(sf)
-            stack_list.append(self.__create_fm_name(path, method))
+            stack_str_list.append(self.__create_fm_name(path, method))
 
-        return stack_list
+        return stack_str_list, stack_list
 
     def __create_yaml_elements_str(
-            self, msg: str, log_level: LogLevelEnum, is_child: bool) -> str:
+            self,
+            msg: str,
+            log_level: LogLevelEnum,
+            is_child: bool,
+            stack_list: list[FrameInfo]) -> str:
         depth_spaces = \
             ''.join(
                 [f'{self.YAML_SPACES_SEPARATOR}  '
@@ -447,7 +493,7 @@ class LoggerStreamHandlerBase(ABC):
             else:
                 yaml_str = f'{depth_spaces[:-2]}- '
 
-        sf = stack()[self._stack_log_start_index + 1]
+        sf = stack_list[0]
 
         path, method, line_number = \
             self.__get_log_path_method_and_line_number_from_sf(sf)
@@ -522,13 +568,17 @@ class LoggerStreamHandlerBase(ABC):
             f'Bug: Yaml element {yaml_element} not implemented')
 
     def __create_line_element_str(
-            self, msg: str, log_level: LogLevelEnum, is_child: bool) -> str:
+            self,
+            msg: str,
+            log_level: LogLevelEnum,
+            is_child: bool,
+            stack_list: list[FrameInfo]) -> str:
         depth_spaces = \
             ''.join(
                 [f'{self.YAML_SPACES_SEPARATOR}  '
                  for _ in range(self._depth)])
 
-        sf = stack()[self._stack_log_start_index + 1]
+        sf = stack_list[0]
 
         path, method, line_number = \
             self.__get_log_path_method_and_line_number_from_sf(sf)
@@ -736,6 +786,7 @@ class ConsoleStreamHandler(LoggerStreamHandlerBase):
         super().__init__()
         self._stream = sys.stdout
         self._stack_log_start_index = 4
+        self._stack_log_increase_decrease_start_index = 3
 
     def critical(
             self,
@@ -787,6 +838,7 @@ class FileStreamHandler(LoggerStreamHandlerBase):
         super().__init__()
         self.__file_path = file_path
         self._stack_log_start_index = 5
+        self._stack_log_increase_decrease_start_index = 3
 
     def critical(
             self,
