@@ -1,5 +1,7 @@
 import unittest
 
+from parameterized import parameterized
+
 from nrt_logging.log_level import LogLevelEnum
 
 
@@ -54,6 +56,16 @@ class LogLevelEnumTests(unittest.TestCase):
     def test_log_level_not_exist_negative(self):
         with self.assertRaises(ValueError):
             LogLevelEnum.build('not exist')
+
+    @parameterized.expand([
+        [LogLevelEnum.INFO,
+         {LogLevelEnum.ERROR, LogLevelEnum.INFO, LogLevelEnum.WARN}],
+        [LogLevelEnum.DEBUG, {LogLevelEnum.DEBUG}],
+        [LogLevelEnum.DEBUG,
+         {LogLevelEnum.ERROR, LogLevelEnum.INFO, LogLevelEnum.DEBUG}]
+    ])
+    def test_min(self, expected_log_level, log_levels_set):
+        self.assertEqual(expected_log_level, min(log_levels_set))
 
 
 if __name__ == '__main__':

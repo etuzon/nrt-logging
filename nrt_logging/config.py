@@ -2,11 +2,15 @@ from typing import Optional
 
 import yaml
 import schema
+
+from nrt_logging.exceptions import NotImplementedCodeException
 from nrt_logging.log_format import LogElementEnum
 from nrt_logging.log_level import LogLevelEnum
 from nrt_logging.logger_stream_handlers import \
     LogStyleEnum, StreamHandlerEnum, ConsoleStreamHandler, \
-    FileStreamHandler, LoggerStreamHandlerBase
+    FileStreamHandler, LoggerStreamHandlerBase,\
+    DEFAULT_MAX_FILE_SIZE, DEFAULT_FILES_AMOUNT, \
+    FileSizeEnum
 
 
 class ConfigBase:
@@ -16,12 +20,21 @@ class ConfigBase:
     DATE_FORMAT = 'date_format'
     LOG_LINE_TEMPLATE = 'log_line_template'
     LOG_YAML_ELEMENTS = 'log_yaml_elements'
+    IS_LIMIT_FILE_SIZE = 'is_limit_file_size'
+    MAX_FILE_SIZE = 'max_file_size'
+    FILES_AMOUNT = 'files_amount'
+    IS_ZIP = 'is_zip'
 
     _log_level: Optional[LogLevelEnum] = None
     _style: Optional[LogStyleEnum] = None
     _date_format: Optional[str] = None
     _log_line_template: Optional[str] = None
     _log_yaml_elements: Optional[list[LogElementEnum]] = None
+
+    _is_limit_file_size: bool = False
+    _max_file_size: int = DEFAULT_MAX_FILE_SIZE
+    _files_amount: int = DEFAULT_FILES_AMOUNT
+    _is_zip: bool = False
 
     _config: Optional[dict] = None
 
@@ -34,6 +47,10 @@ class ConfigBase:
         self._update_log_style()
         self._update_date_format()
         self._update_log_line_template()
+        self.__update_is_limit_file_size()
+        self.__update_max_file_size()
+        self.__update_files_amount()
+        self.__update_is_zip()
 
     @property
     def log_level(self) -> LogLevelEnum:
@@ -54,6 +71,22 @@ class ConfigBase:
     @property
     def log_yaml_elements(self) -> Optional[list[LogElementEnum]]:
         return self._log_yaml_elements
+
+    @property
+    def is_limit_file_size(self) -> bool:
+        return self._is_limit_file_size
+
+    @property
+    def max_file_size(self) -> int:
+        return self._max_file_size
+
+    @property
+    def files_amount(self) -> int:
+        return self._files_amount
+
+    @property
+    def is_zip(self) -> bool:
+        return self._is_zip
 
     @property
     def is_debug(self) -> bool:
@@ -107,21 +140,50 @@ class ConfigBase:
                     log_element_enum_list.append(log_element_enum)
                 except ValueError:
                     raise ValueError(
-                        f'Element [{log_element_str}]'
+                        f'Element [{log_element_str}] in logger config file'
                         f' is not valid YAML log element name')
 
             self._log_yaml_elements = log_element_enum_list
 
+    def __update_is_limit_file_size(self):
+        self._is_limit_file_size = \
+            bool(self._config.get(self.IS_LIMIT_FILE_SIZE))
+
+    def __update_max_file_size(self):
+        file_size_str = self._config.get(self.MAX_FILE_SIZE)
+
+        if file_size_str:
+            self._max_file_size = FileSizeEnum.get_bytes(file_size_str)
+
+    def __update_files_amount(self):
+        files_amount_str = self._config.get(self.FILES_AMOUNT)
+
+        if files_amount_str is not None:
+            self._files_amount = int(files_amount_str)
+
+            if self._files_amount < 0:
+                raise ValueError(
+                    'Files amount in log config cannot be negative')
+
+    def __update_is_zip(self):
+        is_zip = self._config.get(self.IS_ZIP)
+
+        if is_zip is not None:
+            self._is_zip = is_zip
+
 
 class StreamHandlerConfig(ConfigBase):
+    STREAM_HANDLER_NAME = 'name'
     TYPE = 'type'
     FILE_PATH = 'file_path'
 
+    __name: Optional[str] = None
     __type: Optional[StreamHandlerEnum] = None
     __file_path: Optional[str] = None
 
     def __init__(self, config: dict, is_parent_debug: bool):
         super().__init__(config, is_parent_debug)
+        self.__update_stream_handler_name()
         self.__update_type()
         self._update_log_element_list()
         self.__update_file_path()
@@ -133,9 +195,13 @@ class StreamHandlerConfig(ConfigBase):
         if self.type == StreamHandlerEnum.FILE:
             return FileStreamHandler(self.file_path)
 
-        raise NotImplementedError(
+        raise NotImplementedCodeException(
             'Bug: Not implemented stream handler from config'
             f' for type [{self.type.name}]')
+
+    @property
+    def name(self) -> str:
+        return self.__name
 
     @property
     def type(self) -> StreamHandlerEnum:
@@ -158,6 +224,9 @@ class StreamHandlerConfig(ConfigBase):
             raise ValueError(
                 f'{self.TYPE} value [{sh_type}]'
                 f' in stream handler in log config is invalid')
+
+    def __update_stream_handler_name(self):
+        self.__name = self._config.get(self.STREAM_HANDLER_NAME)
 
     def __update_file_path(self):
         file_path = self._config.get(self.FILE_PATH)
@@ -275,6 +344,11 @@ class LoggerManagerConfig(ConfigBase):
                 schema.Optional(cls.DATE_FORMAT): str,
                 schema.Optional(cls.LOG_LINE_TEMPLATE): str,
                 schema.Optional(cls.LOG_YAML_ELEMENTS): list,
+                schema.Optional(StreamHandlerConfig.IS_LIMIT_FILE_SIZE): bool,
+                schema.Optional(
+                    StreamHandlerConfig.MAX_FILE_SIZE): str,
+                schema.Optional(StreamHandlerConfig.FILES_AMOUNT): int,
+                schema.Optional(StreamHandlerConfig.IS_ZIP): bool,
                 cls.LOGGERS_CONFIG: [
                     {
                         LoggerConfig.LOGGER_NAME: str,
@@ -284,11 +358,31 @@ class LoggerManagerConfig(ConfigBase):
                         schema.Optional(cls.DATE_FORMAT): str,
                         schema.Optional(cls.LOG_LINE_TEMPLATE): str,
                         schema.Optional(cls.LOG_YAML_ELEMENTS): list[str],
+                        schema.Optional(
+                            StreamHandlerConfig.IS_LIMIT_FILE_SIZE): bool,
+                        schema.Optional(
+                            StreamHandlerConfig.MAX_FILE_SIZE): str,
+                        schema.Optional(
+                            StreamHandlerConfig.FILES_AMOUNT): int,
+                        schema.Optional(StreamHandlerConfig.IS_ZIP): bool,
                         LoggerConfig.STREAM_HANDLERS: [
                             {
                                 StreamHandlerConfig.TYPE: str,
                                 schema.Optional(
+                                    StreamHandlerConfig
+                                    .STREAM_HANDLER_NAME): str,
+                                schema.Optional(
                                     StreamHandlerConfig.FILE_PATH): str,
+                                schema.Optional(
+                                    StreamHandlerConfig
+                                    .IS_LIMIT_FILE_SIZE): bool,
+                                schema.Optional(
+                                    StreamHandlerConfig
+                                    .MAX_FILE_SIZE): str,
+                                schema.Optional(
+                                    StreamHandlerConfig.FILES_AMOUNT): int,
+                                schema.Optional(
+                                    StreamHandlerConfig.IS_ZIP): bool,
                                 schema.Optional(cls.DEBUG): bool,
                                 schema.Optional(cls.LOG_LEVEL): str,
                                 schema.Optional(cls.STYLE): str,
@@ -298,7 +392,7 @@ class LoggerManagerConfig(ConfigBase):
                                     cls.LOG_YAML_ELEMENTS): list[str]
                             }
                         ]
-                     }
+                    }
                 ]
             }
 

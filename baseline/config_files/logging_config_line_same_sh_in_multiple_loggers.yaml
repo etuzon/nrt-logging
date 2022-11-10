@@ -1,0 +1,14 @@
+loggers:
+  - name: TEST1
+    log_level: INFO
+    stream_handlers:
+      - type: console
+        name: sh_name
+        log_level: DEBUG
+        style: line
+        log_line_template: 'Test $log_level$ $message$'
+  - name: TEST2
+    log_level: DEBUG
+    stream_handlers:
+      - type: console
+        name: sh_name

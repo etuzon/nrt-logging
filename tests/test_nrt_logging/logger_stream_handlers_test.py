@@ -1,12 +1,17 @@
 import os
 import unittest
-import yaml
+from time import sleep
 
-from nrt_logging.log_format import LogDateFormat
+import yaml
+from parameterized import parameterized
+
+from nrt_logging.log_format import \
+    LogDateFormat, LogElementEnum, LogYamlElements
 from nrt_logging.log_level import LogLevelEnum
 from nrt_logging.logger_manager import logger_manager
 from nrt_logging.logger_stream_handlers import \
-    LogStyleEnum, FileStreamHandler, ManualDepthEnum
+    LogStyleEnum, FileStreamHandler, \
+    ManualDepthEnum, FileSizeEnum, ConsoleStreamHandler
 from tests.test_nrt_logging.test_base import \
     NAME_2, TestBase
 
@@ -30,7 +35,9 @@ class LogStyleEnumTests(TestBase):
 
 
 class FileStreamHandlerTests(TestBase):
-    FILE_NAME = 'log_test.log'
+    FILE_EXTENSION = 'log'
+    FILE_NAME_PREFIX = 'log_test'
+    FILE_NAME = f'{FILE_NAME_PREFIX}.{FILE_EXTENSION}'
     FILE_PATH = os.path.join(TestBase.TEMP_PATH, FILE_NAME)
 
     @classmethod
@@ -39,11 +46,10 @@ class FileStreamHandlerTests(TestBase):
             os.makedirs(cls.TEMP_PATH)
 
     def setUp(self):
-        if os.path.exists(self.FILE_PATH):
-            os.remove(self.FILE_PATH)
+        self._close_loggers_and_delete_logs()
 
     def tearDown(self):
-        os.remove(self.FILE_PATH)
+        self._close_loggers_and_delete_logs()
 
     def test_write_to_log(self):
         sh = FileStreamHandler(self.FILE_PATH)
@@ -81,7 +87,7 @@ class FileStreamHandlerTests(TestBase):
             LogLevelEnum.CRITICAL,
             expected_class_path,
             expected_method_name,
-            58,
+            64,
             msg_1)
 
         children = log_list[0].get('children')
@@ -94,7 +100,7 @@ class FileStreamHandlerTests(TestBase):
             LogLevelEnum.ERROR,
             expected_class_path,
             expected_method_name,
-            59,
+            65,
             child_1)
 
         self._verify_log_line(
@@ -103,7 +109,7 @@ class FileStreamHandlerTests(TestBase):
             LogLevelEnum.WARN,
             expected_class_path,
             expected_method_name,
-            60,
+            66,
             child_2)
 
         self._verify_log_line(
@@ -112,7 +118,7 @@ class FileStreamHandlerTests(TestBase):
             LogLevelEnum.INFO,
             expected_class_path,
             expected_method_name,
-            61,
+            67,
             child_1)
 
         self._verify_log_line(
@@ -121,7 +127,7 @@ class FileStreamHandlerTests(TestBase):
             LogLevelEnum.INFO,
             expected_class_path,
             expected_method_name,
-            63,
+            69,
             msg_2)
 
         children = log_list[2].get('children')
@@ -134,7 +140,7 @@ class FileStreamHandlerTests(TestBase):
             LogLevelEnum.ERROR,
             expected_class_path,
             expected_method_name,
-            65,
+            71,
             child_1)
 
         self._verify_log_line(
@@ -143,8 +149,173 @@ class FileStreamHandlerTests(TestBase):
             LogLevelEnum.INFO,
             expected_class_path,
             expected_method_name,
-            67,
+            73,
             msg_2)
+
+    def test_write_to_log_and_limit_files_size(self):
+        file_size_limitation = 1000
+        sh = FileStreamHandler(self.FILE_PATH)
+        sh.style = LogStyleEnum.LINE
+        sh.log_line_template = LogElementEnum.MESSAGE.line_format
+        sh.is_limit_file_size = True
+        sh.files_amount = 2
+        sh.max_file_size = file_size_limitation
+        sh.is_zip = False
+        logger = logger_manager.get_logger(NAME_2)
+        logger.add_stream_handler(sh)
+
+        for _ in range(11):
+            logger.info(self.MSG_100_BYTES)
+            sleep(0.05)
+
+        log_files = os.listdir(self.TEMP_PATH)
+
+        self.assertEqual(2, len(log_files))
+
+        log_files.sort()
+
+        archive_1_path = os.path.join(self.TEMP_PATH, log_files[1])
+
+        archive_size = \
+            os.path.getsize(archive_1_path)
+
+        self.assertTrue(
+            2 * file_size_limitation > archive_size > file_size_limitation)
+
+        with open(archive_1_path) as f:
+            log_list = yaml.safe_load(f.read())
+
+        self.assertGreater(len(log_list), 9)
+
+        with open(self.FILE_PATH) as f:
+            log_list = yaml.safe_load(f.read())
+
+        self.assertLess(len(log_list), 3)
+
+    def test_set_log_level(self):
+        original_log_level = ConsoleStreamHandler().log_level
+        updated_log_level = LogLevelEnum.CRITICAL
+        ConsoleStreamHandler.set_log_level(updated_log_level)
+        self.assertEqual(updated_log_level, ConsoleStreamHandler().log_level)
+        self.assertEqual(original_log_level, FileStreamHandler('a').log_level)
+        ConsoleStreamHandler.set_log_level(original_log_level)
+        self.assertEqual(original_log_level, ConsoleStreamHandler().log_level)
+
+    def test_set_log_date_format(self):
+        original_log_date_format = ConsoleStreamHandler().log_date_format
+        updated_log_date_format = LogDateFormat(date_format='%Y-%m-%d')
+        ConsoleStreamHandler.set_log_date_format(updated_log_date_format)
+        self.assertEqual(
+            updated_log_date_format.date_format,
+            ConsoleStreamHandler().log_date_format.date_format)
+        ConsoleStreamHandler.set_log_date_format(original_log_date_format)
+        self.assertEqual(
+            original_log_date_format.date_format,
+            ConsoleStreamHandler().log_date_format.date_format)
+
+    def test_set_log_yaml_elements(self):
+        original_log_yaml_elements = ConsoleStreamHandler().log_yaml_elements
+        updated_log_yaml_elements = \
+            LogYamlElements(yaml_elements={LogElementEnum.DATE})
+        ConsoleStreamHandler.set_log_yaml_elements(updated_log_yaml_elements)
+        self.assertEqual(
+            updated_log_yaml_elements.yaml_elements,
+            ConsoleStreamHandler().log_yaml_elements.yaml_elements)
+        ConsoleStreamHandler.set_log_yaml_elements(original_log_yaml_elements)
+        self.assertEqual(
+            original_log_yaml_elements.yaml_elements,
+            ConsoleStreamHandler().log_yaml_elements.yaml_elements)
+
+    def test_set_log_line_template(self):
+        original_log_line_template = ConsoleStreamHandler().log_line_template
+        updated_log_line_template = 'test 123 $message$'
+        ConsoleStreamHandler.set_log_line_template(updated_log_line_template)
+        self.assertEqual(
+            updated_log_line_template,
+            ConsoleStreamHandler().log_line_template)
+        ConsoleStreamHandler.set_log_line_template(original_log_line_template)
+        self.assertEqual(
+            original_log_line_template,
+            ConsoleStreamHandler().log_line_template)
+
+    def test_invalid_max_file_size_negative(self):
+        file_stream_handler = FileStreamHandler('/test.txt')
+
+        with self.assertRaises(ValueError):
+            file_stream_handler.max_file_size = 0
+
+        with self.assertRaises(ValueError):
+            file_stream_handler.max_file_size = -1
+
+    def test_invalid_files_amount_negative(self):
+        file_stream_handler = FileStreamHandler('/test.txt')
+
+        with self.assertRaises(ValueError):
+            file_stream_handler.files_amount = -1
+
+
+class FileSizeEnumTests(TestBase):
+
+    @parameterized.expand([
+        [FileSizeEnum.B, 1],
+        [FileSizeEnum.KB, 10 ** 3],
+        [FileSizeEnum.MB, 10 ** 6],
+        [FileSizeEnum.GB, 10 ** 9],
+        [FileSizeEnum.TB, 10 ** 12],
+    ])
+    def test_bytes(self, file_size_enum: FileSizeEnum, expected_size):
+        self.assertEqual(expected_size, file_size_enum.bytes)
+
+    @parameterized.expand([
+        ['B', FileSizeEnum.B],
+        ['kb', FileSizeEnum.KB],
+        ['mB', FileSizeEnum.MB],
+        ['Gb', FileSizeEnum.GB],
+        ['TB', FileSizeEnum.TB],
+    ])
+    def test_build(
+            self, size_str: str, expected_file_size_enum: FileSizeEnum):
+        self.assertEqual(
+            expected_file_size_enum, FileSizeEnum.build(size_str))
+
+    @parameterized.expand([
+        [''], ['k'], ['dd'], ['12'], ['qwer']
+    ])
+    def test_build_negative(self, value: str):
+        with self.assertRaises(ValueError):
+            FileSizeEnum.build(value)
+
+    @parameterized.expand([
+        ['10 gb', 10 * 1000 * 1000 * 1000],
+        ['5gb', 5 * 1000 * 1000 * 1000],
+        ['8 B', 8],
+        ['234b', 234],
+        ['134 Kb', 134 * 1000],
+        ['44TB', 44 * 1000 * 1000 * 1000 * 1000],
+        ['3 MB', 3 * 1000 * 1000],
+        ['50mB', 50 * 1000 * 1000]
+    ])
+    def test_get_bytes(self, file_size_str: str, expected_bytes: int):
+        self.assertEqual(
+            expected_bytes, FileSizeEnum.get_bytes(file_size_str))
+
+    @parameterized.expand([
+        ['10 gb a'],
+        ['-5gb'],
+        ['-8 B'],
+        ['-234b'],
+        ['4 Ks'],
+        ['44Tq'],
+        ['b'],
+        ['0 b'],
+        ['0 KB'],
+        ['0b'],
+        ['0MB'],
+        ['3qwe']
+    ])
+    def test_get_bytes_negative(self, file_size_str: str):
+        with self.assertRaises(ValueError):
+            FileSizeEnum.get_bytes(file_size_str)
 
 
 if __name__ == '__main__':

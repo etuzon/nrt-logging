@@ -1,0 +1,11 @@
+loggers:
+  - name: TEST1
+    stream_handlers:
+      - type: file
+        file_path: temp/log_test_1.txt
+        log_level: DEBUG
+        style: line
+        log_line_template: '$date$ $message$'
+        is_limit_file_size: true
+        files_amount: 2
+        is_zip: true

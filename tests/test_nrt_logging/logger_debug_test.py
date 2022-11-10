@@ -18,14 +18,13 @@ class LoggersDebugTests(TestBase):
 
     # skipcq: PYL-R0201
     def setUp(self):
-        logger_1 = logger_manager.get_logger(NAME_1)
-
-        if logger_1:
-            logger_1.close_stream_handlers()
+        logger_manager.close_logger(NAME_1)
 
     # skipcq: PYL-R0201
     def tearDown(self):
         logger_manager.is_debug = False
+
+        logger_manager.close_logger(NAME_1)
 
     @stdout_redirect
     def test_debug_in_logger_manager_with_line_style(self):
@@ -42,7 +41,7 @@ class LoggersDebugTests(TestBase):
         logger.info(child_1, manual_depth=ManualDepthEnum.INCREASE)
         so = r_stdout.getvalue()
         log_list = yaml.safe_load(so)
-        self.assertEqual(len(log_list), 1)
+        self.assertEqual(1, len(log_list))
 
         log_line = log_list[0]['log']
 
@@ -52,7 +51,7 @@ class LoggersDebugTests(TestBase):
             LogLevelEnum.TRACE,
             f'{TEST_FILE_NAME}.{self.__class__.__name__}',
             method_name,
-            39,
+            40,
             msg_1,
             True)
 
@@ -66,7 +65,7 @@ class LoggersDebugTests(TestBase):
             LogLevelEnum.INFO,
             f'{TEST_FILE_NAME}.{self.__class__.__name__}',
             method_name,
-            40,
+            41,
             child_1,
             True)
 
@@ -109,6 +108,32 @@ class LoggersDebugTests(TestBase):
         message = log_doc.get(LogElementEnum.MESSAGE.element_name)
         self.assertIsNotNone(message)
         self.assertTrue(message.startswith(f'{msg}\nNRT-Logging DEBUG:'))
+
+    @stdout_redirect
+    def test_debug_increase_and_decrease_with_line_style(self):
+        logger_manager.is_debug = True
+        sh = ConsoleStreamHandler()
+        sh.style = LogStyleEnum.LINE
+        sh.log_level = LogLevelEnum.TRACE
+        logger = logger_manager.get_logger(NAME_1)
+        logger.add_stream_handler(sh)
+        logger.info('abc')
+        logger.increase_depth()
+        logger.decrease_depth()
+
+        so = r_stdout.getvalue()
+        log_list = yaml.safe_load(so)
+        self.assertEqual(2, len(log_list))
+
+        increase_log_list = log_list[0].get('children')
+        self.assertEqual(1, len(increase_log_list))
+        increase_log = increase_log_list[0]
+        self.assertTrue(
+            'NRT-Logging Increase Depth DEBUG' in increase_log['log'])
+
+        decrease_log = log_list[1]
+        self.assertTrue(
+            'NRT-Logging Decrease Depth DEBUG' in decrease_log['log'])
 
 
 if __name__ == '__main__':
