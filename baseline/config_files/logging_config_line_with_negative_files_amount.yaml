@@ -1,0 +1,12 @@
+loggers:
+  - name: TEST1
+    stream_handlers:
+      - type: file
+        file_path: temp/log_test_1.txt
+        log_level: TRACE
+        style: line
+        log_line_template: '$date$ $message$'
+        is_limit_file_size: true
+        max_file_size: '1 kb'
+        files_amount: -1
+        is_zip: false

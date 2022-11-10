@@ -1,15 +1,15 @@
 import os
 import unittest
+from time import sleep
+from zipfile import ZipFile
 
 import yaml
-from parameterized import parameterized
-
-from nrt_logging.config import StreamHandlerConfig, FileSizeEnum
+from nrt_logging.config import StreamHandlerConfig
 from nrt_logging.log_format import LogElementEnum
 from nrt_logging.log_level import LogLevelEnum
 from nrt_logging.logger_manager import logger_manager
 from nrt_logging.logger_stream_handlers import \
-    ManualDepthEnum, LoggerStreamHandlerBase
+    ManualDepthEnum, LoggerStreamHandlerBase, DEFAULT_MAX_FILE_SIZE
 from tests.test_nrt_logging.test_base import \
     TestBase, stdout_redirect, r_stdout, is_date_in_format
 
@@ -39,6 +39,14 @@ class LoggerManagerConfigTests(TestBase):
         'logging_config_yaml_same_logger.yaml'
     LOGGER_LINE_SAME_SH_IN_MULTIPLE_LOGGERS_FILE_NAME = \
         'logging_config_line_same_sh_in_multiple_loggers.yaml'
+    LOGGER_LINE_WITH_LIMIT_FILE_SIZE_FILE_NAME = \
+        'logging_config_line_with_limit_file_size.yaml'
+    LOGGER_LINE_WITH_LIMIT_FILE_SIZE_AND_ZIP_FILE_NAME = \
+        'logging_config_line_with_limit_file_size_and_zip.yaml'
+    LOGGER_WITH_LIMIT_FILE_SIZE_AND_NO_ARCHIVE_FILE_NAME = \
+        'logging_config_line_with_limit_file_size_without_archive.yaml'
+    LOGGER_LINE_WITH_NEGATIVE_FILES_AMOUNT_FILE_NAME = \
+        'logging_config_line_with_negative_files_amount.yaml'
 
     MULTI_SH_NO_INHERITANCE_FILE_PATH = \
         os.path.join(BASELINE_PATH, MULTI_SH_NO_INHERITANCE_FILE_NAME)
@@ -74,31 +82,50 @@ class LoggerManagerConfigTests(TestBase):
         os.path.join(
             BASELINE_PATH,
             LOGGER_LINE_SAME_SH_IN_MULTIPLE_LOGGERS_FILE_NAME)
+    LOGGER_LINE_WITH_LIMIT_FILE_SIZE_FILE_PATH = \
+        os.path.join(
+            BASELINE_PATH,
+            LOGGER_LINE_WITH_LIMIT_FILE_SIZE_FILE_NAME)
+    LOGGER_LINE_WITH_LIMIT_FILE_SIZE_AND_ZIP_FILE_PATH = \
+        os.path.join(
+            BASELINE_PATH,
+            LOGGER_LINE_WITH_LIMIT_FILE_SIZE_AND_ZIP_FILE_NAME)
+    LOGGER_WITH_LIMIT_FILE_SIZE_AND_NO_ARCHIVE_FILE_PATH = \
+        os.path.join(
+            BASELINE_PATH,
+            LOGGER_WITH_LIMIT_FILE_SIZE_AND_NO_ARCHIVE_FILE_NAME)
+    LOGGER_LINE_WITH_NEGATIVE_FILES_AMOUNT_FILE_PATH = \
+        os.path.join(
+            BASELINE_PATH,
+            LOGGER_LINE_WITH_NEGATIVE_FILES_AMOUNT_FILE_NAME)
 
     FILE_NAME_1 = 'log_test_1.txt'
     FILE_NAME_2 = 'log_test_2.txt'
+    FILE_NAME_3 = 'log_test_3'
+
     FILE_PATH_1 = os.path.join(TestBase.TEMP_PATH, FILE_NAME_1)
     FILE_PATH_2 = os.path.join(TestBase.TEMP_PATH, FILE_NAME_2)
+    FILE_PATH_3 = os.path.join(TestBase.TEMP_PATH, FILE_NAME_3)
 
     LOGGER_NAME_1 = 'TEST1'
     LOGGER_NAME_2 = 'TEST2'
 
     CONFIG_DICT = {
-            'loggers': [
-                {
-                    'name': LOGGER_NAME_1,
-                    'stream_handlers': [
-                        {
-                            'type': 'console',
-                            'log_level': 'DEBUG',
-                            'style': 'line',
-                            'date_format': '%Y-%m',
-                            'log_line_template': 'Test $message$'
-                        }
-                    ]
-                }
-            ]
-        }
+        'loggers': [
+            {
+                'name': LOGGER_NAME_1,
+                'stream_handlers': [
+                    {
+                        'type': 'console',
+                        'log_level': 'DEBUG',
+                        'style': 'line',
+                        'date_format': '%Y-%m',
+                        'log_line_template': 'Test $message$'
+                    }
+                ]
+            }
+        ]
+    }
 
     expected_class_path = None
 
@@ -110,19 +137,10 @@ class LoggerManagerConfigTests(TestBase):
         cls.expected_class_path = f'{cls.TEST_FILE_NAME}.{cls.__name__}'
 
     def setUp(self):
-        if os.path.exists(self.FILE_PATH_1):
-            os.remove(self.FILE_PATH_1)
-        if os.path.exists(self.FILE_PATH_2):
-            os.remove(self.FILE_PATH_2)
+        self._close_loggers_and_delete_logs()
 
     def tearDown(self):
-        if os.path.exists(self.FILE_PATH_1):
-            os.remove(self.FILE_PATH_1)
-        if os.path.exists(self.FILE_PATH_2):
-            os.remove(self.FILE_PATH_2)
-
-        logger_manager.close_logger(self.LOGGER_NAME_1)
-        logger_manager.close_logger(self.LOGGER_NAME_2)
+        self._close_loggers_and_delete_logs()
 
     @stdout_redirect
     def test_logging_config_multi_sh_no_inheritance(self):
@@ -400,7 +418,7 @@ class LoggerManagerConfigTests(TestBase):
             LogLevelEnum.DEBUG,
             self.expected_class_path,
             'test_recreate_logger_yaml',
-            358,
+            376,
             msg_1)
         self.__verify_log_yaml(
             yaml_list[1],
@@ -408,7 +426,7 @@ class LoggerManagerConfigTests(TestBase):
             LogLevelEnum.INFO,
             self.expected_class_path,
             'test_recreate_logger_yaml',
-            365,
+            383,
             msg_2)
 
         self.__verify_log_yaml(
@@ -417,7 +435,7 @@ class LoggerManagerConfigTests(TestBase):
             LogLevelEnum.INFO,
             self.expected_class_path,
             'test_recreate_logger_yaml',
-            372,
+            390,
             msg_1)
 
         children = yaml_list[2].get('children')
@@ -429,7 +447,7 @@ class LoggerManagerConfigTests(TestBase):
             LogLevelEnum.INFO,
             self.expected_class_path,
             'test_recreate_logger_yaml',
-            373,
+            391,
             child_1)
 
         children = child.get('children')
@@ -441,7 +459,7 @@ class LoggerManagerConfigTests(TestBase):
             LogLevelEnum.INFO,
             self.expected_class_path,
             'test_recreate_logger_yaml',
-            374,
+            392,
             child_2)
 
         children = child.get('children')
@@ -453,7 +471,7 @@ class LoggerManagerConfigTests(TestBase):
             LogLevelEnum.INFO,
             self.expected_class_path,
             'test_recreate_logger_yaml',
-            375,
+            393,
             child_1)
         child = children[1]
         self.__verify_log_yaml(
@@ -462,7 +480,7 @@ class LoggerManagerConfigTests(TestBase):
             LogLevelEnum.INFO,
             self.expected_class_path,
             'test_recreate_logger_yaml',
-            376,
+            394,
             child_2)
 
         self.__verify_log_yaml(
@@ -471,7 +489,7 @@ class LoggerManagerConfigTests(TestBase):
             LogLevelEnum.INFO,
             self.expected_class_path,
             'test_recreate_logger_yaml',
-            382,
+            400,
             msg_2)
 
         children = yaml_list[3].get('children')
@@ -483,7 +501,7 @@ class LoggerManagerConfigTests(TestBase):
             LogLevelEnum.INFO,
             self.expected_class_path,
             'test_recreate_logger_yaml',
-            383,
+            401,
             child_2)
 
     def test_config_logger_with_invalid_log_level_negative(self):
@@ -497,9 +515,10 @@ class LoggerManagerConfigTests(TestBase):
                 file_path=self.LOGGER_YAML_WITH_INVALID_STYLE_FILE_PATH)
 
     def test_config_logger_with_invalid_log_yaml_elements_negative(self):
+        file_path = self.LOGGER_YAML_WITH_INVALID_LOG_YAML_ELEMENTS_FILE_PATH
+
         with self.assertRaises(ValueError):
-            logger_manager.set_config(
-                file_path=self.LOGGER_YAML_WITH_INVALID_LOG_YAML_ELEMENTS_FILE_PATH)
+            logger_manager.set_config(file_path=file_path)
 
     def test_config_logger_without_name_negative(self):
         with self.assertRaises(ValueError):
@@ -583,6 +602,114 @@ class LoggerManagerConfigTests(TestBase):
         self.assertTrue(LogLevelEnum.DEBUG.name in console_log_list[1]['log'])
         self.assertTrue(msg_3 in console_log_list[1]['log'])
 
+    def test_config_with_file_limitation(self):
+        file_size_limitation = 1000
+        expected_archive_files_amount = 3
+
+        logger_manager.set_config(
+            file_path=self.LOGGER_LINE_WITH_LIMIT_FILE_SIZE_FILE_PATH)
+        logger = logger_manager.get_logger(self.LOGGER_NAME_1)
+
+        for _ in range(100):
+            logger.trace(self.MSG_100_BYTES)
+            sleep(0.05)
+
+        log_files = os.listdir(self.TEMP_PATH)
+
+        self.assertEqual(expected_archive_files_amount, len(log_files) - 1)
+
+        log_files.sort()
+
+        archive_log_lines = []
+
+        for i in range(expected_archive_files_amount, 1):
+            archive_path = os.path.join(self.TEMP_PATH, log_files[i])
+
+            archive_size = \
+                os.path.getsize(archive_path)
+
+            self.assertLess(archive_size, 1.3 * file_size_limitation)
+            self.assertGreater(archive_path, file_size_limitation)
+
+            with open(archive_path) as f:
+                log_list = yaml.safe_load(f.read())
+
+            self.assertGreater(len(log_list), 8)
+
+            archive_log_lines += log_list
+
+        with open(self.FILE_PATH_3) as f:
+            log_list = yaml.safe_load(f.read())
+
+        self.assertFalse(
+            any(row in archive_log_lines for row in log_list))
+
+    def test_config_with_file_limitation_and_zip_archive(self):
+        file_size_limitation = DEFAULT_MAX_FILE_SIZE
+        expected_archive_files_amount = 2
+
+        logger_manager.set_config(
+            file_path=self.LOGGER_LINE_WITH_LIMIT_FILE_SIZE_AND_ZIP_FILE_PATH)
+        logger = logger_manager.get_logger(self.LOGGER_NAME_1)
+
+        for _ in range(30 * 10 * 100):
+            logger.info(self.MSG_1000_BYTES)
+
+        # Sleep until the thread that zip archive will be finished
+        sleep(2)
+
+        log_files = os.listdir(self.TEMP_PATH)
+
+        self.assertEqual(expected_archive_files_amount, len(log_files) - 1)
+
+        log_files.sort()
+
+        for i in range(expected_archive_files_amount, 1):
+            archive_zip_path = os.path.join(self.TEMP_PATH, log_files[i])
+            self.assertTrue(archive_zip_path.endswith('.zip'))
+
+            log_zip = ZipFile(archive_zip_path)
+            zip_dict = {
+                name: log_zip.read(name) for name in log_zip.namelist()
+            }
+
+            self.assertEqual(1, len(zip_dict))
+            self.assertTrue(
+                list(zip_dict.keys())[0].start_with(self.LOGGER_NAME_1))
+
+            archive = list(zip_dict.items())[0]
+
+            self.assertGreater(len(archive), file_size_limitation)
+            self.assertLess(len(archive), 1.3 * file_size_limitation)
+
+    def test_config_with_file_limitation_without_archive(self):
+        file_size_limitation = 1000
+        expected_archive_files_amount = 0
+        file_path = self.LOGGER_WITH_LIMIT_FILE_SIZE_AND_NO_ARCHIVE_FILE_PATH
+
+        logger_manager.set_config(file_path=file_path)
+        logger = logger_manager.get_logger(self.LOGGER_NAME_1)
+
+        for _ in range(100):
+            logger.info(self.MSG_100_BYTES)
+
+        log_files = os.listdir(self.TEMP_PATH)
+
+        self.assertEqual(expected_archive_files_amount, len(log_files) - 1)
+
+        archive_path = os.path.join(self.TEMP_PATH, log_files[0])
+
+        archive_size = \
+            os.path.getsize(archive_path)
+
+        self.assertLess(archive_size, 1.2 * file_size_limitation)
+
+    def test_config_with_file_limitation_with_negative_files_amount(self):
+        file_path = self.LOGGER_LINE_WITH_NEGATIVE_FILES_AMOUNT_FILE_PATH
+
+        with self.assertRaises(ValueError):
+            logger_manager.set_config(file_path=file_path)
+
     def __verify_log_yaml(
             self,
             log_yaml: dict,
@@ -639,52 +766,6 @@ class StreamHandlerConfigTests(TestBase):
 
         with self.assertRaises(ValueError, msg=''):
             StreamHandlerConfig(stream_handler_dict, False)
-
-
-class FileSizeEnumTests(TestBase):
-
-    @parameterized.expand([
-        [FileSizeEnum.B, 1],
-        [FileSizeEnum.KB, 10 ** 3],
-        [FileSizeEnum.MB, 10 ** 6],
-        [FileSizeEnum.GB, 10 ** 9],
-        [FileSizeEnum.TB, 10 ** 12],
-    ])
-    def test_bytes(self, file_size_enum: FileSizeEnum, expected_size):
-        self.assertEqual(expected_size, file_size_enum.bytes)
-
-    @parameterized.expand([
-        ['B', FileSizeEnum.B],
-        ['kb', FileSizeEnum.KB],
-        ['mB', FileSizeEnum.MB],
-        ['Gb', FileSizeEnum.GB],
-        ['TB', FileSizeEnum.TB],
-    ])
-    def test_build(
-            self, size_str: str, expected_file_size_enum: FileSizeEnum):
-        self.assertEqual(
-            expected_file_size_enum, FileSizeEnum.build(size_str))
-
-    @parameterized.expand([
-        [''], ['k'], ['dd'], ['12'], ['qwer']
-    ])
-    def test_build_negative(self, value: str):
-        with self.assertRaises(ValueError):
-            FileSizeEnum.build(value)
-
-    @parameterized.expand([
-        ['10 gb', 10 * 1000 * 1000 * 1000],
-        ['5gb', 5 * 1000 * 1000 * 1000],
-        ['8 B', 8],
-        ['234b', 234],
-        ['134 Kb', 134 * 1000],
-        ['44TB', 44 * 1000 * 1000 * 1000 * 1000],
-        ['3 MB', 3 * 1000 * 1000],
-        ['50mB', 50 * 1000 * 1000]
-    ])
-    def test_get_bytes(self, file_size_str: str, expected_bytes: int):
-        self.assertEqual(
-            expected_bytes, FileSizeEnum.get_bytes(file_size_str))
 
 
 if __name__ == '__main__':

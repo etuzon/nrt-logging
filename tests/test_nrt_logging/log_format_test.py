@@ -39,6 +39,10 @@ class LogYamlElementsTests(unittest.TestCase):
             {LogElementEnum.DATE, LogElementEnum.LOG_LEVEL},
             LogYamlElements.build(log_yaml_elements).yaml_elements)
 
+    def test_build_with_invalid_value_negative(self):
+        with self.assertRaises(ValueError):
+            LogYamlElements.build('test')
+
 
 if __name__ == '__main__':
     unittest.main()

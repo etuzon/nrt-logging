@@ -1,5 +1,9 @@
 import ntpath
+import os
+from os.path import exists, getsize
 import sys
+from glob import glob
+from threading import Thread
 from abc import ABC, abstractmethod
 from dataclasses import dataclass
 from datetime import datetime
@@ -7,6 +11,7 @@ from threading import Lock
 from enum import Enum
 from inspect import stack, FrameInfo
 from typing import IO, Optional, Union
+from zipfile import ZipFile, ZIP_DEFLATED
 
 from nrt_logging.exceptions import NotImplementedCodeException
 from nrt_logging.log_format import \
@@ -59,12 +64,91 @@ DEFAULT_LOG_STYLE = LogStyleEnum.LINE
 DEFAULT_LOG_LEVEL = LogLevelEnum.INFO
 
 
+class FileSizeEnum(Enum):
+    B = 1
+    KB = 10 ** 3
+    MB = 10 ** 6
+    GB = 10 ** 9
+    TB = 10 ** 12
+
+    @property
+    def bytes(self) -> int:
+        return self._value_
+
+    @classmethod
+    def build(cls, name: str):
+        name_u = name.upper()
+
+        for file_size_enum in cls:
+            if name_u == file_size_enum.name:
+                return file_size_enum
+
+        raise ValueError(f'[{name}] is not valid file size name')
+
+    @classmethod
+    def get_bytes(cls, file_size_str: str) -> int:
+        if ' ' in file_size_str:
+            return cls.__get_bytes_for_str_with_space(file_size_str)
+
+        return cls.__get_bytes_for_str_without_space(file_size_str)
+
+    @classmethod
+    def __get_bytes_for_str_with_space(cls, file_size_str: str) -> int:
+        file_size_split = file_size_str.split(' ')
+
+        if len(file_size_split) != 2:
+            raise ValueError(
+                f'File size [{file_size_str}] is with invalid syntax')
+
+        num = int(file_size_split[0])
+
+        if num <= 0:
+            raise ValueError(
+                f'File size [{file_size_str}] has invalid syntax')
+
+        return num * cls.build(file_size_split[1]).bytes
+
+    @classmethod
+    def __get_bytes_for_str_without_space(cls, file_size_str: str) -> int:
+        if len(file_size_str) > 2:
+            try:
+                file_size = FileSizeEnum.build(file_size_str[-2:])
+                num = cls.__num_str_to_int(
+                    file_size_str[:-2], file_size_str)
+                return num * file_size.bytes
+            except ValueError:
+                pass
+
+        if len(file_size_str) >= 2:
+            file_size = FileSizeEnum.build(file_size_str[-1:])
+            num = cls.__num_str_to_int(
+                file_size_str[:-1], file_size_str)
+            return num * file_size.bytes
+
+        raise ValueError(
+            f'File size [{file_size_str}] has invalid syntax')
+
+    @classmethod
+    def __num_str_to_int(cls, num_str: str, s: str):
+        if not num_str.isdigit():
+            raise ValueError(f'File size [{s}] has invalid syntax')
+
+        num = int(num_str)
+
+        if num <= 0:
+            raise ValueError(f'File size [{s}] has invalid syntax')
+
+        return num
+
+
+DEFAULT_MAX_FILE_SIZE = 10 * FileSizeEnum.MB.bytes
+DEFAULT_FILES_AMOUNT = 10
+
+
 class LoggerStreamHandlerBase(ABC):
     YAML_SPACES_SEPARATOR = ' ' * 2
     YAML_CHILDREN_SPACES_SEPARATOR = ' ' * 4
     YAML_DOCUMENT_SEPARATOR = '---'
-
-    _STACK_LOG_START_INDEX = 4
 
     LOG_LINE_DEFAULT_TEMPLATE = \
         f'{LogElementEnum.DATE.line_format}' \
@@ -80,9 +164,9 @@ class LoggerStreamHandlerBase(ABC):
     _stream: Optional[IO] = None
 
     _lock: Lock
-    _stack_log_start_index: int = _STACK_LOG_START_INDEX
-    _stack_log_increase_decrease_start_index: int = \
-        _STACK_LOG_START_INDEX - 1
+    __stack_log_start_index: int
+    __stack_log_increase_start_index: int
+    __stack_log_decrease_start_index: int
     _log_level: Optional[LogLevelEnum] = None
     _style: Optional[LogStyleEnum] = None
     _name: Optional[str] = None
@@ -95,7 +179,16 @@ class LoggerStreamHandlerBase(ABC):
 
     _is_debug: bool = False
 
-    def __init__(self):
+    def __init__(
+            self,
+            stack_log_start_index: int,
+            stack_log_increase_start_index: int = 3,
+            stack_log_decrease_start_index: int = 3):
+
+        self.__stack_log_start_index = stack_log_start_index
+        self.__stack_log_increase_start_index = stack_log_increase_start_index
+        self.__stack_log_decrease_start_index = stack_log_decrease_start_index
+
         if self._log_level is None:
             self._log_level = DEFAULT_LOG_LEVEL
 
@@ -105,8 +198,12 @@ class LoggerStreamHandlerBase(ABC):
         if self._log_line_template is None:
             self._log_line_template = self.LOG_LINE_DEFAULT_TEMPLATE
 
-        self._log_date_format = LogDateFormat()
-        self._log_yaml_elements = LogYamlElements()
+        if self._log_date_format is None:
+            self._log_date_format = LogDateFormat()
+
+        if self._log_yaml_elements is None:
+            self._log_yaml_elements = LogYamlElements()
+
         self._depth = 0
         self._depth_list = []
         self._increase_depth_list = []
@@ -160,9 +257,16 @@ class LoggerStreamHandlerBase(ABC):
         raise NotImplementedCodeException
 
     def increase_depth(self):
+        if self.is_debug:
+            msg = \
+                'NRT-Logging Increase Depth DEBUG\n'\
+                'Stack Log Increase Start Index:'\
+                f' {self.__stack_log_increase_start_index}'
+            self.debug(msg)
+
         stack_str_list, _ = \
             self.__get_stack_list(
-                start_index=self._stack_log_increase_decrease_start_index)
+                start_index=self.__stack_log_increase_start_index)
 
         self._increase_depth_list.append(stack_str_list[0])
 
@@ -170,9 +274,16 @@ class LoggerStreamHandlerBase(ABC):
         if level < 1:
             return
 
+        if self.is_debug:
+            msg = \
+                'NRT-Logging Decrease Depth DEBUG\n'\
+                'Stack Log Decrease Start Index:'\
+                f' {self.__stack_log_decrease_start_index}'
+            self.debug(msg)
+
         stack_str_list, _ = \
             self.__get_stack_list(
-                start_index=self._stack_log_increase_decrease_start_index)
+                start_index=self.__stack_log_decrease_start_index)
 
         fm_name = stack_str_list[0]
         drop_list = []
@@ -187,13 +298,6 @@ class LoggerStreamHandlerBase(ABC):
             self._depth_list.pop(drop_index)
 
         self._decrease_depth_list.append(fm_name)
-
-    def get_latest_fm_depth(self, fm_name: str) -> Optional[DepthData]:
-        for fm_depth in reversed(self._depth_list):
-            if fm_name == fm_depth.name:
-                return fm_depth
-
-        return None
 
     @property
     def name(self) -> str:
@@ -263,11 +367,10 @@ class LoggerStreamHandlerBase(ABC):
 
         if log_level >= self.log_level:
             stack_str_list, stack_list = \
-                self.__get_stack_list(start_index=self._stack_log_start_index)
+                self.__get_stack_list(start_index=self.__stack_log_start_index)
 
             if self.is_debug:
-                msg += \
-                    '\nNRT-Logging DEBUG:\n' + '\n'.join(stack_str_list)
+                msg += self.__add_debug_to_message()
 
             manual_depth = \
                 self.__update_manual_depth(stack_str_list[0], manual_depth)
@@ -277,6 +380,13 @@ class LoggerStreamHandlerBase(ABC):
                     msg, log_level, stack_str_list, stack_list, manual_depth)
 
             self.__write(f'{log_str}\n')
+
+    def __get_latest_fm_depth(self, fm_name: str) -> Optional[DepthData]:
+        for fm_depth in reversed(self._depth_list):
+            if fm_name == fm_depth.name:
+                return fm_depth
+
+        return None
 
     def __create_log_str(
             self,
@@ -361,7 +471,8 @@ class LoggerStreamHandlerBase(ABC):
         if self.style == LogStyleEnum.YAML:
             return self.__create_yaml_elements_str(
                 msg, log_level, is_child, stack_list)
-        elif self.style == LogStyleEnum.LINE:
+
+        if self.style == LogStyleEnum.LINE:
             return self.__create_line_element_str(
                 msg, log_level, is_child, stack_list)
 
@@ -370,7 +481,8 @@ class LoggerStreamHandlerBase(ABC):
     def __create_log_str_prefix(self, is_child: bool):
         if is_child:
             return self.__create_prefix_log_str_for_child()
-        elif self._depth == 0 and self.style == LogStyleEnum.YAML:
+
+        if self._depth == 0 and self.style == LogStyleEnum.YAML:
             return f'{self.YAML_DOCUMENT_SEPARATOR}'
 
         return ''
@@ -384,7 +496,8 @@ class LoggerStreamHandlerBase(ABC):
                 ])
         if self.style == LogStyleEnum.YAML:
             return f'{depth_4_spaces}children:'
-        elif self.style == LogStyleEnum.LINE:
+
+        if self.style == LogStyleEnum.LINE:
             return f'{self.YAML_SPACES_SEPARATOR}{depth_4_spaces}children:'
 
         raise NotImplementedCodeException()
@@ -460,9 +573,7 @@ class LoggerStreamHandlerBase(ABC):
         self._lock.release()
 
     def __get_stack_list(
-            self,
-            start_index: int = _STACK_LOG_START_INDEX) \
-            -> (list[str], list[FrameInfo]):
+            self, start_index: int) -> (list[str], list[FrameInfo]):
 
         stack_str_list = []
         stack_list = stack()[start_index:]
@@ -638,7 +749,7 @@ class LoggerStreamHandlerBase(ABC):
             f' {datetime.now().strftime(self.log_date_format.date_format)}'
 
     def __update_depth_for_manual_increased_child_depth(self, fm_name: str):
-        latest_fm_depth = self.get_latest_fm_depth(fm_name)
+        latest_fm_depth = self.__get_latest_fm_depth(fm_name)
         depth_data = DepthData(name=fm_name)
         depth_data.manual_depth_change = 1
         depth_data.total_manual_depth = latest_fm_depth.total_manual_depth + 1
@@ -646,7 +757,7 @@ class LoggerStreamHandlerBase(ABC):
         self._depth_list.append(depth_data)
 
     def __update_depth_for_manual_decreased_child_depth(self, fm_name: str):
-        latest_fm_depth = self.get_latest_fm_depth(fm_name)
+        latest_fm_depth = self.__get_latest_fm_depth(fm_name)
 
         if self._depth > 0 \
                 and latest_fm_depth.total_manual_depth > 0:
@@ -671,6 +782,13 @@ class LoggerStreamHandlerBase(ABC):
 
         return False
 
+    def __add_debug_to_message(self) -> str:
+        debug_st_str_list, _ = self.__get_stack_list(start_index=1)
+        return \
+            '\nNRT-Logging DEBUG:\n' \
+            f'Start Index: {self.__stack_log_start_index}\n' \
+            + '\n'.join(debug_st_str_list)
+
     @classmethod
     def set_log_level(cls, level: LogLevelEnum):
         cls._log_level = level
@@ -685,7 +803,7 @@ class LoggerStreamHandlerBase(ABC):
 
     @classmethod
     def set_log_yaml_elements(cls, log_yaml_elements: LogYamlElements):
-        cls._log_yaml_elements = LogYamlElements.build(log_yaml_elements)
+        cls._log_yaml_elements = log_yaml_elements
 
     @classmethod
     def set_log_line_template(cls, log_line_template: str):
@@ -783,10 +901,11 @@ class LoggerStreamHandlerBase(ABC):
 class ConsoleStreamHandler(LoggerStreamHandlerBase):
 
     def __init__(self):
-        super().__init__()
+        super().__init__(
+            stack_log_start_index=4,
+            stack_log_increase_start_index=3,
+            stack_log_decrease_start_index=3)
         self._stream = sys.stdout
-        self._stack_log_start_index = 4
-        self._stack_log_increase_decrease_start_index = 3
 
     def critical(
             self,
@@ -831,14 +950,26 @@ class ConsoleStreamHandler(LoggerStreamHandlerBase):
 
 
 class FileStreamHandler(LoggerStreamHandlerBase):
+    __ARCHIVE_DATE_FORMAT = '%Y_%m_%d_%H_%M_%S_%f'
+    __ZIP_COMPRESSION_LEVEL = 7
 
     __file_path: str
+    __file_path_prefix: str
+    __file_extension: str
+
+    __is_limit_file_size: bool = False
+    __max_file_size: int = DEFAULT_MAX_FILE_SIZE
+    __files_amount: int = DEFAULT_FILES_AMOUNT
+    __is_zip: bool = False
 
     def __init__(self, file_path: str):
-        super().__init__()
+        super().__init__(
+            stack_log_start_index=5,
+            stack_log_increase_start_index=3,
+            stack_log_decrease_start_index=3)
         self.__file_path = file_path
-        self._stack_log_start_index = 5
-        self._stack_log_increase_decrease_start_index = 3
+        self.__file_path_prefix = self.__get_log_file_path_prefix()
+        self.__file_extension = self.__get_log_file_extension()
 
     def critical(
             self,
@@ -880,12 +1011,146 @@ class FileStreamHandler(LoggerStreamHandlerBase):
         if self._stream is not None:
             self._stream.close()
 
+    @property
+    def is_limit_file_size(self) -> bool:
+        return self.__is_limit_file_size
+
+    @is_limit_file_size.setter
+    def is_limit_file_size(self, is_limit_file_size: bool):
+        self.__is_limit_file_size = is_limit_file_size
+
+    @property
+    def max_file_size(self) -> int:
+        return self.__max_file_size
+
+    @max_file_size.setter
+    def max_file_size(self, max_file_size: int):
+        if max_file_size <= 0:
+            raise ValueError('Log file size must be bigger from 0')
+
+        self.__max_file_size = max_file_size
+
+    @property
+    def files_amount(self) -> int:
+        return self.__files_amount
+
+    @files_amount.setter
+    def files_amount(self, files_amount: int):
+        if files_amount < 0:
+            raise ValueError('Log files amount cannot be negative number')
+
+        self.__files_amount = files_amount
+
+    @property
+    def is_zip(self) -> bool:
+        return self.__is_zip
+
+    @is_zip.setter
+    def is_zip(self, is_zip: bool):
+        self.__is_zip = is_zip
+
     def _log(
             self,
             log_level: LogLevelEnum,
             msg: str,
             manual_depth: ManualDepthEnum = ManualDepthEnum.NO_CHANGE):
 
+        self.__limit_file_size()
+
         self._stream = open(self.__file_path, 'a')
         super()._log(log_level, msg, manual_depth)
         self.close()
+
+    def __limit_file_size(self):
+        if self.is_limit_file_size:
+            if not exists(self.__file_path):
+                return
+
+            file_size = getsize(self.__file_path)
+
+            if file_size >= self.max_file_size:
+                self._lock.acquire()
+                archive_file_path = self.__archive_log()
+                self._lock.release()
+
+                t = \
+                    Thread(
+                        target=self.__zip_archive_and_limit_file_amount,
+                        args=(archive_file_path,))
+                t.start()
+
+    def __zip_archive_and_limit_file_amount(self, archive_file_path: str):
+        if self.is_zip:
+            with ZipFile(
+                    f'{archive_file_path}.zip',
+                    mode='w',
+                    compression=ZIP_DEFLATED,
+                    compresslevel=self.__ZIP_COMPRESSION_LEVEL) as z:
+                z.write(
+                    archive_file_path,
+                    arcname=ntpath.basename(archive_file_path))
+            os.remove(archive_file_path)
+
+        self.__limit_files_amount()
+
+    def __limit_files_amount(self):
+        # if files_amount == 0 than truncate log in __archive_log()
+        if self.files_amount > 0:
+            files_list = self.__get_archive_files_list()
+
+            if len(files_list) > self.files_amount:
+                files_list.sort()
+                os.remove(files_list[0])
+
+    def __get_archive_files_list(self):
+        return [file for file in glob(f'{self.__file_path_prefix}*')
+                if self.__is_archive_file(file)]
+
+    def __archive_log(self) -> Optional[str]:
+        if self.files_amount == 0:
+            os.remove(self.__file_path)
+            return None
+
+        archive_file_path = self.__create_archive_file_path_name()
+        os.rename(self.__file_path, archive_file_path)
+        return archive_file_path
+
+    def __create_archive_file_path_name(self) -> str:
+        archive_suffix = self.__create_archive_suffix(self.__file_extension)
+        return f'{self.__file_path_prefix}{archive_suffix}'
+
+    def __get_log_file_path_prefix(self) -> str:
+        try:
+            dot_index = self.__file_path.rindex('.')
+            return self.__file_path[:dot_index]
+        except ValueError:
+            return self.__file_path
+
+    def __get_log_file_extension(self) -> Optional[str]:
+        try:
+            dot_index = self.__file_path.rindex(".")
+            return self.__file_path[dot_index + 1:]
+        except ValueError:
+            return None
+
+    def __is_archive_file(self, file_path: str):
+        suffix = file_path[len(self.__file_path_prefix) + 1:]
+
+        try:
+            suffix = suffix[:suffix.index('.')]
+        except ValueError:
+            pass
+
+        try:
+            datetime.strptime(suffix, self.__ARCHIVE_DATE_FORMAT)
+            return True
+        except ValueError:
+            return False
+
+    @classmethod
+    def __create_archive_suffix(cls, file_extension: Optional[str]) -> str:
+        if file_extension is not None:
+            return f'_{datetime.now().strftime(cls.__ARCHIVE_DATE_FORMAT)}' \
+                   f'.{file_extension}'
+
+        return f'_{datetime.now().strftime(cls.__ARCHIVE_DATE_FORMAT)}'

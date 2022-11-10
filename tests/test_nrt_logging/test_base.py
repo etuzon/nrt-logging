@@ -1,4 +1,5 @@
 import os
+import shutil
 import sys
 import unittest
 from datetime import datetime
@@ -6,6 +7,7 @@ from io import StringIO
 from typing import Optional
 
 from nrt_logging.log_level import LogLevelEnum
+from nrt_logging.logger_manager import logger_manager
 
 NAME_1 = 'name_1'
 NAME_2 = 'name_2'
@@ -37,8 +39,9 @@ def is_date_in_format(date_str: str, date_format: str):
 # skipcq: PTC-W0046
 class TestBase(unittest.TestCase):
     TEMP_PATH = os.path.join(os.getcwd(), 'temp')
-
     Y_M_DATE_FORMAT = '%Y-%m'
+    MSG_100_BYTES = '1234567890' * 10
+    MSG_1000_BYTES = '1234567890' * 100
 
     def _verify_log_line(
             self,
@@ -68,9 +71,20 @@ class TestBase(unittest.TestCase):
             f'{expected_class_path}.{expected_method_name}' \
             f':{expected_line_number}'
 
-        self.assertEqual(f'[{expected_code_location}]', log_line_split[index + 1])
+        self.assertEqual(
+            f'[{expected_code_location}]', log_line_split[index + 1])
         if is_debug:
-            self.assertEqual(f'{expected_msg}\nNRT-Logging', log_line_split[index + 2])
+            self.assertEqual(
+                f'{expected_msg}\nNRT-Logging', log_line_split[index + 2])
             self.assertTrue(log_line_split[index + 3].startswith('DEBUG'))
         else:
             self.assertEqual(expected_msg, log_line_split[index + 2])
+
+    @classmethod
+    def _close_loggers_and_delete_logs(cls):
+        logger_manager.close_all_loggers()
+
+        shutil.rmtree(cls.TEMP_PATH)
+
+        if not os.path.exists(cls.TEMP_PATH):
+            os.mkdir(cls.TEMP_PATH)

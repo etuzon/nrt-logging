@@ -28,12 +28,18 @@ class NrtLoggerManager:
 
         return self.__logger_dict[name]
 
-    def close_logger(self, name):
+    def close_logger(self, name: str):
         logger = self.__logger_dict.get(name)
 
         if logger:
             logger.close_stream_handlers()
             self.__logger_dict.pop(name)
+
+    def close_all_loggers(self):
+        logger_dict = self.__logger_dict.copy()
+
+        for name in logger_dict.keys():
+            self.close_logger(name)
 
     def set_config(
             self, file_path: str = None, config: dict = None):
@@ -118,6 +124,14 @@ class NrtLoggerManager:
         self.__update_stream_handler_log_yaml_elements_from_config(
             sh, stream_handler_config, logger_config)
         self.__update_stream_handler_debug_from_config(
+            sh, stream_handler_config, logger_config)
+        self.__update_stream_handler_is_limit_file_size_from_config(
+            sh, stream_handler_config, logger_config)
+        self.__update_stream_handler_max_file_size_from_config(
+            sh, stream_handler_config, logger_config)
+        self.__update_stream_handler_files_amount_from_config(
+            sh, stream_handler_config, logger_config)
+        self.__update_stream_handler_is_zip_from_config(
             sh, stream_handler_config, logger_config)
 
         if stream_handler_config.file_path is not None:
@@ -207,10 +221,70 @@ class NrtLoggerManager:
         if is_debug is not None:
             sh.is_debug = is_debug
 
+    def __update_stream_handler_is_limit_file_size_from_config(
+            self,
+            sh: LoggerStreamHandlerBase,
+            stream_handler_config: StreamHandlerConfig,
+            logger_config: LoggerConfig):
+
+        is_limit_file_size = \
+            self.__get_inherited_property_from_config(
+                ConfigBase.IS_LIMIT_FILE_SIZE,
+                stream_handler_config,
+                logger_config)
+
+        if is_limit_file_size is not None:
+            sh.is_limit_file_size = is_limit_file_size
+
+    def __update_stream_handler_max_file_size_from_config(
+            self,
+            sh: LoggerStreamHandlerBase,
+            stream_handler_config: StreamHandlerConfig,
+            logger_config: LoggerConfig):
+
+        max_file_size = \
+            self.__get_inherited_property_from_config(
+                ConfigBase.MAX_FILE_SIZE,
+                stream_handler_config,
+                logger_config)
+
+        if max_file_size is not None:
+            sh.max_file_size = max_file_size
+
+    def __update_stream_handler_files_amount_from_config(
+            self,
+            sh: LoggerStreamHandlerBase,
+            stream_handler_config: StreamHandlerConfig,
+            logger_config: LoggerConfig):
+
+        files_amount = \
+            self.__get_inherited_property_from_config(
+                ConfigBase.FILES_AMOUNT,
+                stream_handler_config,
+                logger_config)
+
+        if files_amount is not None:
+            sh.files_amount = files_amount
+
+    def __update_stream_handler_is_zip_from_config(
+            self,
+            sh: LoggerStreamHandlerBase,
+            stream_handler_config: StreamHandlerConfig,
+            logger_config: LoggerConfig):
+
+        is_zip = \
+            self.__get_inherited_property_from_config(
+                ConfigBase.IS_ZIP,
+                stream_handler_config,
+                logger_config)
+
+        if is_zip is not None:
+            sh.is_zip = is_zip
+
     def __get_inherited_property_from_config(
             self,
             property_name: str,
-            stream_handler_config:Optional[StreamHandlerConfig],
+            stream_handler_config: Optional[StreamHandlerConfig],
             logger_config: LoggerConfig):
 
         if stream_handler_config:

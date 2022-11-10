@@ -41,7 +41,7 @@ class LoggersDebugTests(TestBase):
         logger.info(child_1, manual_depth=ManualDepthEnum.INCREASE)
         so = r_stdout.getvalue()
         log_list = yaml.safe_load(so)
-        self.assertEqual(len(log_list), 1)
+        self.assertEqual(1, len(log_list))
 
         log_line = log_list[0]['log']
 
@@ -108,6 +108,32 @@ class LoggersDebugTests(TestBase):
         message = log_doc.get(LogElementEnum.MESSAGE.element_name)
         self.assertIsNotNone(message)
         self.assertTrue(message.startswith(f'{msg}\nNRT-Logging DEBUG:'))
+
+    @stdout_redirect
+    def test_debug_increase_and_decrease_with_line_style(self):
+        logger_manager.is_debug = True
+        sh = ConsoleStreamHandler()
+        sh.style = LogStyleEnum.LINE
+        sh.log_level = LogLevelEnum.TRACE
+        logger = logger_manager.get_logger(NAME_1)
+        logger.add_stream_handler(sh)
+        logger.info('abc')
+        logger.increase_depth()
+        logger.decrease_depth()
+
+        so = r_stdout.getvalue()
+        log_list = yaml.safe_load(so)
+        self.assertEqual(2, len(log_list))
+
+        increase_log_list = log_list[0].get('children')
+        self.assertEqual(1, len(increase_log_list))
+        increase_log = increase_log_list[0]
+        self.assertTrue(
+            'NRT-Logging Increase Depth DEBUG' in increase_log['log'])
+
+        decrease_log = log_list[1]
+        self.assertTrue(
+            'NRT-Logging Decrease Depth DEBUG' in decrease_log['log'])
 
 
 if __name__ == '__main__':

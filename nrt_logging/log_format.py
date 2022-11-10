@@ -62,4 +62,9 @@ class LogYamlElements:
         if isinstance(log_yaml_elements, list):
             return LogYamlElements(yaml_elements=set(log_yaml_elements))
 
-        return LogYamlElements(yaml_elements=log_yaml_elements)
+        if isinstance(log_yaml_elements, set):
+            return LogYamlElements(yaml_elements=log_yaml_elements)
+
+        raise ValueError(
+            f'Type [{type(log_yaml_elements)}]'
+            f' of log_yaml_elements is not supported')
