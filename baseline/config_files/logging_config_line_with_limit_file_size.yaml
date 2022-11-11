@@ -7,6 +7,6 @@ loggers:
         style: line
         log_line_template: '$date$ $message$'
         is_limit_file_size: true
-        max_file_size: '1 kb'
+        max_file_size: '1 KB'
         files_amount: 3
         is_zip: false
