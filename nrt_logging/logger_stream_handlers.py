@@ -1,15 +1,15 @@
 import ntpath
 import os
-from os.path import exists, getsize
 import sys
-from glob import glob
-from threading import Thread
 from abc import ABC, abstractmethod
 from dataclasses import dataclass
 from datetime import datetime
-from threading import Lock
 from enum import Enum
+from glob import glob
 from inspect import stack, FrameInfo
+from os.path import exists, getsize
+from threading import Lock
+from threading import Thread
 from typing import IO, Optional, Union
 from zipfile import ZipFile, ZIP_DEFLATED
 
@@ -292,7 +292,9 @@ class LoggerStreamHandlerBase(ABC):
             if depth.name == fm_name and depth.manual_depth_change == 1:
                 level -= 1
                 drop_list.append(len(self._depth_list) - 1 - i)
-                self._depth -= 1
+
+                if self._depth > 0:
+                    self._depth -= 1
 
         for drop_index in drop_list:
             self._depth_list.pop(drop_index)
@@ -547,6 +549,9 @@ class LoggerStreamHandlerBase(ABC):
         for i, parent in enumerate(reversed(self._depth_list)):
             if parent.name in stack_list:
                 self._depth -= reverse_depth
+
+                if self._depth < 0:
+                    self._depth = 0
 
                 for _ in range(i):
                     self._depth_list.pop()

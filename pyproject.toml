@@ -1,14 +1,15 @@
 [project]
 
 name='nrt-logging'
-version='1.2.2'
+version='1.2.3'
 authors=[
 { name='Eyal Tuzon', email='eyal.tuzon.dev@gmail.com' },
 ]
 description='Hierarchical logging in yaml format'
 keywords=[
-'logging', 'logger', 'log', 'hierarchical',
-'hierarchy', 'yaml']
+'python', 'python3', 'python-3', 'logging', 'logger', 'log', 'loggers',
+'hierarchical', 'logging-library', 'logging-framework', 'hierarchy', 'yaml',
+'nrt', 'nrt-logging']
 readme='README.md'
 requires-python='>=3.9'
 classifiers=[
