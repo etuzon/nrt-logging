@@ -2,7 +2,6 @@ import os
 from setuptools import setup
 import nrt_logging
 
-
 PATH = os.path.dirname(__file__)
 
 with open(os.path.join(PATH, 'requirements.txt')) as f:
@@ -17,7 +16,9 @@ setup(
     author='Eyal Tuzon',
     author_email='eyal.tuzon.dev@gmail.com',
     description='Hierarchical logging in yaml format',
-    keywords='logging logger log hierarchical hierarchy yaml',
+    keywords='python python3 python-3 logging logger log loggers'
+             ' logging-library logging-framework hierarchical hierarchy'
+             ' yaml nrt nrt-logging',
     long_description_content_type='text/markdown',
     long_description=readme,
     url='https://github.com/etuzon/Python-NRT-Logging',
