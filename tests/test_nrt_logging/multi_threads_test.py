@@ -6,7 +6,8 @@ from nrt_logging.logger import NrtLogger
 from nrt_logging.logger_manager import logger_manager
 from nrt_logging.logger_stream_handlers import \
     ConsoleStreamHandler, LogStyleEnum
-from tests.test_nrt_logging.test_base import TestBase, NAME_1, stdout_redirect, r_stdout
+from tests.test_nrt_logging.test_base import \
+    TestBase, NAME_1, stdout_redirect, r_stdout
 
 A_MSG_1 = 'A METHOD 1'
 A_MSG_2 = 'A METHOD 2'
@@ -15,8 +16,8 @@ B_MSG_1 = 'B METHOD 1'
 C_MSG_1 = 'C METHOD 1'
 
 
-class LoggerThread(Thread):
-    __LOOP = 200
+class LoggerThread1(Thread):
+    __LOOP = 50
 
     __logger: NrtLogger
 
@@ -60,6 +61,23 @@ class LoggerThread(Thread):
         self.__logger.info(C_MSG_1)
 
 
+class LoggerThread2(Thread):
+    __LOOP = 50
+
+    __logger: NrtLogger
+
+    def __init__(self):
+        super().__init__()
+        self.__logger = logger_manager.get_logger(NAME_1)
+
+    def run(self):
+        for _ in range(self.__LOOP):
+            self.__logger.info(A_MSG_1)
+            self.__logger.increase_depth()
+            self.__logger.info(A_MSG_2)
+            self.__logger.decrease_depth()
+
+
 class MultiThreadsTests(TestBase):
     def setUp(self):
         logger_manager.close_all_loggers()
@@ -70,10 +88,19 @@ class MultiThreadsTests(TestBase):
     @stdout_redirect
     def test_01_multi_threads_not_crash(self):
         self.__create_logger_and_sh()
+        self.__execute_multi_thread_test(LoggerThread1, 200)
+
+    @stdout_redirect
+    def test_02_multi_threads_not_crash(self):
+        self.__create_logger_and_sh()
+        self.__execute_multi_thread_test(LoggerThread2, 200)
+
+    def __execute_multi_thread_test(
+            self, logger_thread_cls, loop_amount: int):
         multi_thread_list = []
 
-        for _ in range(200):
-            multi_thread_list.append(LoggerThread())
+        for _ in range(loop_amount):
+            multi_thread_list.append(logger_thread_cls())
 
         for multi_thread in multi_thread_list:
             multi_thread.start()

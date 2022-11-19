@@ -382,6 +382,9 @@ class LoggerStreamHandlerBase(ABC):
                 self.__get_stack_list(start_index=self.__stack_log_start_index)
 
             with self._lock:
+                if isinstance(msg, bytes):
+                    msg = msg.decode('utf-8')
+
                 if self.is_debug:
                     msg += self.__add_debug_to_message()
 
@@ -406,7 +409,8 @@ class LoggerStreamHandlerBase(ABC):
 
                 self.__clean_threads_dicts()
 
-    def __get_latest_fm_depth(self, fm_name: str, thread_id: int) -> Optional[DepthData]:
+    def __get_latest_fm_depth(
+            self, fm_name: str, thread_id: int) -> Optional[DepthData]:
         for fm_depth in reversed(self._depth_list_dict[thread_id]):
             if fm_name == fm_depth.name:
                 return fm_depth
@@ -796,8 +800,19 @@ class LoggerStreamHandlerBase(ABC):
             f' {datetime.now().strftime(self.log_date_format.date_format)}'
 
     def __update_depth_for_manual_increased_child_depth(
-            self, fm_name: str, thread_id: int):
+            self, fm_name: str, thread_id: int) -> bool:
+
         latest_fm_depth = self.__get_latest_fm_depth(fm_name, thread_id)
+
+        """
+        Scenario:
+        1. thread_1: Time: 0, logger.info('msg')
+        2. thread_1: Time: 1, logger.increase_depth()
+        3. thread_2: Time: 2, Same logger.info('msg') of thread_1
+        """
+        if latest_fm_depth is None:
+            return False
+
         depth_data = DepthData(name=fm_name)
         depth_data.manual_depth_change = 1
         depth_data.total_manual_depth = latest_fm_depth.total_manual_depth + 1
@@ -805,6 +820,8 @@ class LoggerStreamHandlerBase(ABC):
         self._depth_dict[thread_id] += 1
 
         self._depth_list_dict[thread_id].append(depth_data)
+
+        return True
 
     def __update_depth_for_manual_decreased_child_depth(
             self, fm_name: str, thread_id: int):
@@ -828,9 +845,9 @@ class LoggerStreamHandlerBase(ABC):
             manual_depth: ManualDepthEnum,
             thread_id: int):
         if manual_depth == ManualDepthEnum.INCREASE:
-            self.__update_depth_for_manual_increased_child_depth(
-                fm_name, thread_id)
-            return True
+            return \
+                self.__update_depth_for_manual_increased_child_depth(
+                    fm_name, thread_id)
 
         if manual_depth == ManualDepthEnum.DECREASE:
             self.__update_depth_for_manual_decreased_child_depth(

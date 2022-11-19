@@ -236,6 +236,19 @@ class NrtLoggerManager2Tests(TestBase):
         self.assertEqual(1, len(children))
         self.assertTrue(f'{A_MSG_1} i=1' in children[0]['log'])
 
+    @stdout_redirect
+    def test_line_logger_bytes_msg(self):
+        msg_bytes = b'123456789'
+        msg_str = msg_bytes.decode('utf-8')
+        logger = self.__create_logger_and_sh()
+        logger.info(msg_bytes)
+        so = r_stdout.getvalue()
+
+        log_list = yaml.safe_load(so)
+
+        self.assertEqual(1, len(log_list))
+        self.assertTrue(msg_str in log_list[0]['log'])
+
     @classmethod
     def __create_logger_and_sh(cls):
         sh = ConsoleStreamHandler()
