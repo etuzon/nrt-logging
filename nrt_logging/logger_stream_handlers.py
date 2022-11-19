@@ -1,6 +1,7 @@
 import ntpath
 import os
 import sys
+import threading
 from abc import ABC, abstractmethod
 from dataclasses import dataclass
 from datetime import datetime
@@ -158,24 +159,32 @@ class LoggerStreamHandlerBase(ABC):
         f':{LogElementEnum.LINE_NUMBER.line_format}]' \
         f' {LogElementEnum.MESSAGE.line_format}'
 
+    _CLEAN_THREADS_DICTS = 100
+    __CLEAN_THREADS_COUNT = 2000
+
     _log_date_format: Optional[LogDateFormat] = None
     _log_yaml_elements: Optional[LogYamlElements] = None
 
     _stream: Optional[IO] = None
 
     _lock: Lock
+
+    __clean_threads_counter: int
     __stack_log_start_index: int
     __stack_log_increase_start_index: int
     __stack_log_decrease_start_index: int
     _log_level: Optional[LogLevelEnum] = None
     _style: Optional[LogStyleEnum] = None
     _name: Optional[str] = None
-    _depth: int
-    _depth_list: list[DepthData]
-    _increase_depth_list: list[str]
-    _decrease_depth_list: list[str]
-
     _log_line_template: Optional[str] = None
+
+    # {Thread Id: depth}
+    _depth_dict: dict[int, int]
+    # {Thread Id: list}
+    _depth_list_dict: dict[int, list[DepthData]]
+    # {Thread Id: list}
+    _increase_depth_list_dict: dict[int, list[str]]
+    _decrease_depth_list_dict: dict[int, list[str]]
 
     _is_debug: bool = False
 
@@ -204,10 +213,12 @@ class LoggerStreamHandlerBase(ABC):
         if self._log_yaml_elements is None:
             self._log_yaml_elements = LogYamlElements()
 
-        self._depth = 0
-        self._depth_list = []
-        self._increase_depth_list = []
-        self._decrease_depth_list = []
+        thread_id = threading.get_ident()
+        self._depth_dict = {thread_id: 0}
+        self._depth_list_dict = {thread_id: []}
+        self._increase_depth_list_dict = {thread_id: []}
+        self._decrease_depth_list_dict = {thread_id: []}
+        self.__clean_threads_counter = 0
         self._lock = Lock()
 
     @abstractmethod
@@ -257,49 +268,48 @@ class LoggerStreamHandlerBase(ABC):
         raise NotImplementedCodeException
 
     def increase_depth(self):
-        if self.is_debug:
-            msg = \
-                'NRT-Logging Increase Depth DEBUG\n'\
-                'Stack Log Increase Start Index:'\
-                f' {self.__stack_log_increase_start_index}'
-            self.debug(msg)
+        with self._lock:
+            stack_str_list, _ = \
+                self.__get_stack_list(
+                    start_index=self.__stack_log_increase_start_index)
 
-        stack_str_list, _ = \
-            self.__get_stack_list(
-                start_index=self.__stack_log_increase_start_index)
+            thread_id = threading.get_ident()
 
-        self._increase_depth_list.append(stack_str_list[0])
+            self.__add_new_thread_id_to_dicts(thread_id)
+
+            self._increase_depth_list_dict[thread_id].append(
+                stack_str_list[0])
 
     def decrease_depth(self, level: int = 1):
         if level < 1:
             return
 
-        if self.is_debug:
-            msg = \
-                'NRT-Logging Decrease Depth DEBUG\n'\
-                'Stack Log Decrease Start Index:'\
-                f' {self.__stack_log_decrease_start_index}'
-            self.debug(msg)
+        with self._lock:
+            stack_str_list, _ = \
+                self.__get_stack_list(
+                    start_index=self.__stack_log_decrease_start_index)
 
-        stack_str_list, _ = \
-            self.__get_stack_list(
-                start_index=self.__stack_log_decrease_start_index)
+            fm_name = stack_str_list[0]
+            drop_list = []
 
-        fm_name = stack_str_list[0]
-        drop_list = []
+            thread_id = threading.get_ident()
 
-        for i, depth in enumerate(reversed(self._depth_list)):
-            if depth.name == fm_name and depth.manual_depth_change == 1:
-                level -= 1
-                drop_list.append(len(self._depth_list) - 1 - i)
+            self.__add_new_thread_id_to_dicts(thread_id)
 
-                if self._depth > 0:
-                    self._depth -= 1
+            for i, depth in enumerate(
+                    reversed(self._depth_list_dict[thread_id])):
+                if depth.name == fm_name and depth.manual_depth_change == 1:
+                    level -= 1
+                    drop_list.append(
+                        len(self._depth_list_dict[thread_id]) - 1 - i)
 
-        for drop_index in drop_list:
-            self._depth_list.pop(drop_index)
+                    if self._depth_dict[thread_id] > 0:
+                        self._depth_dict[thread_id] -= 1
 
-        self._decrease_depth_list.append(fm_name)
+            for drop_index in drop_list:
+                self._depth_list_dict[thread_id].pop(drop_index)
+
+            self._decrease_depth_list_dict[thread_id].append(fm_name)
 
     @property
     def name(self) -> str:
@@ -371,20 +381,33 @@ class LoggerStreamHandlerBase(ABC):
             stack_str_list, stack_list = \
                 self.__get_stack_list(start_index=self.__stack_log_start_index)
 
-            if self.is_debug:
-                msg += self.__add_debug_to_message()
+            with self._lock:
+                if self.is_debug:
+                    msg += self.__add_debug_to_message()
 
-            manual_depth = \
-                self.__update_manual_depth(stack_str_list[0], manual_depth)
+                thread_id = threading.get_ident()
 
-            log_str = \
-                self.__create_log_str(
-                    msg, log_level, stack_str_list, stack_list, manual_depth)
+                self.__add_new_thread_id_to_dicts(thread_id)
 
-            self.__write(f'{log_str}\n')
+                manual_depth = \
+                    self.__update_manual_depth(
+                        stack_str_list[0], manual_depth, thread_id)
 
-    def __get_latest_fm_depth(self, fm_name: str) -> Optional[DepthData]:
-        for fm_depth in reversed(self._depth_list):
+                log_str = \
+                    self.__create_log_str(
+                        msg,
+                        log_level,
+                        stack_str_list,
+                        stack_list,
+                        manual_depth,
+                        thread_id)
+
+                self._stream.write(f'{log_str}\n')
+
+                self.__clean_threads_dicts()
+
+    def __get_latest_fm_depth(self, fm_name: str, thread_id: int) -> Optional[DepthData]:
+        for fm_depth in reversed(self._depth_list_dict[thread_id]):
             if fm_name == fm_depth.name:
                 return fm_depth
 
@@ -396,22 +419,31 @@ class LoggerStreamHandlerBase(ABC):
             log_level: LogLevelEnum,
             stack_str_list: list[str],
             stack_list: list[FrameInfo],
-            manual_depth: ManualDepthEnum):
-        if self._depth_list:
+            manual_depth: ManualDepthEnum,
+            thread_id: int):
+        if self._depth_list_dict.get(thread_id):
             return \
                 self.__create_log_str_on_depth_plus(
-                    msg, log_level, stack_str_list, stack_list, manual_depth)
+                    msg,
+                    log_level,
+                    stack_str_list,
+                    stack_list,
+                    manual_depth,
+                    thread_id)
 
         return \
             self.__create_log_str_on_depth_0(
-                msg, log_level, stack_str_list, stack_list)
+                msg, log_level, stack_str_list, stack_list, thread_id)
 
     def __update_manual_depth(
-            self, fm_name: str, manual_depth: ManualDepthEnum):
+            self,
+            fm_name: str,
+            manual_depth: ManualDepthEnum,
+            thread_id: int):
 
         if manual_depth == ManualDepthEnum.NO_CHANGE \
-                and fm_name in self._increase_depth_list:
-            self._increase_depth_list.remove(fm_name)
+                and fm_name in self._increase_depth_list_dict[thread_id]:
+            self._increase_depth_list_dict[thread_id].remove(fm_name)
             return ManualDepthEnum.INCREASE
 
         return manual_depth
@@ -421,21 +453,22 @@ class LoggerStreamHandlerBase(ABC):
             msg: str,
             log_level: LogLevelEnum,
             stack_str_list: list[str],
-            stack_list: list[FrameInfo]) -> str:
+            stack_list: list[FrameInfo],
+            thread_id: int) -> str:
 
         fm_name = stack_str_list[0]
 
-        self._depth_list.append(DepthData(name=fm_name))
+        self._depth_list_dict[thread_id].append(DepthData(name=fm_name))
 
         if self.style == LogStyleEnum.YAML:
             return \
                 self.YAML_DOCUMENT_SEPARATOR \
                 + self.__create_yaml_elements_str(
-                    msg, log_level, False, stack_list)
+                    msg, log_level, False, stack_list, thread_id)
 
         if self.style == LogStyleEnum.LINE:
             return self.__create_line_element_str(
-                msg, log_level, False, stack_list)
+                msg, log_level, False, stack_list, thread_id)
 
         raise NotImplementedCodeException()
 
@@ -445,11 +478,12 @@ class LoggerStreamHandlerBase(ABC):
             log_level: LogLevelEnum,
             stack_str_list: list[str],
             stack_list: list[FrameInfo],
-            manual_depth: ManualDepthEnum):
+            manual_depth: ManualDepthEnum,
+            thread_id: int):
 
         fm_name = stack_str_list[0]
         parent_stack_list = stack_str_list[1:]
-        expected_parent_fm_name = self._depth_list[-1].name
+        expected_parent_fm_name = self._depth_list_dict[thread_id][-1].name
 
         is_child = \
             self.__update_depth(
@@ -457,44 +491,47 @@ class LoggerStreamHandlerBase(ABC):
                 stack_str_list,
                 expected_parent_fm_name,
                 parent_stack_list,
-                manual_depth)
+                manual_depth,
+                thread_id)
 
         return \
-            self.__create_log_str_prefix(is_child) \
+            self.__create_log_str_prefix(is_child, thread_id) \
             + self.__create_log_str_suffix(
-                msg, log_level, is_child, stack_list)
+                msg, log_level, is_child, stack_list, thread_id)
 
     def __create_log_str_suffix(
             self, msg: str,
             log_level: LogLevelEnum,
             is_child: bool,
-            stack_list: list[FrameInfo]):
+            stack_list: list[FrameInfo],
+            thread_id: int):
 
         if self.style == LogStyleEnum.YAML:
             return self.__create_yaml_elements_str(
-                msg, log_level, is_child, stack_list)
+                msg, log_level, is_child, stack_list, thread_id)
 
         if self.style == LogStyleEnum.LINE:
             return self.__create_line_element_str(
-                msg, log_level, is_child, stack_list)
+                msg, log_level, is_child, stack_list, thread_id)
 
         raise NotImplementedCodeException()
 
-    def __create_log_str_prefix(self, is_child: bool):
+    def __create_log_str_prefix(self, is_child: bool, thread_id: int):
         if is_child:
-            return self.__create_prefix_log_str_for_child()
+            return self.__create_prefix_log_str_for_child(thread_id)
 
-        if self._depth == 0 and self.style == LogStyleEnum.YAML:
+        if self._depth_dict[thread_id] == 0 \
+                and self.style == LogStyleEnum.YAML:
             return f'{self.YAML_DOCUMENT_SEPARATOR}'
 
         return ''
 
-    def __create_prefix_log_str_for_child(self):
+    def __create_prefix_log_str_for_child(self, thread_id: int):
         depth_4_spaces = \
             ''.join(
                 [
                     self.YAML_CHILDREN_SPACES_SEPARATOR
-                    for _ in range(self._depth - 1)
+                    for _ in range(self._depth_dict[thread_id] - 1)
                 ])
         if self.style == LogStyleEnum.YAML:
             return f'{depth_4_spaces}children:'
@@ -510,7 +547,8 @@ class LoggerStreamHandlerBase(ABC):
             stack_list: list[str],
             expected_parent_fm_name: str,
             parent_stack_list: list[str],
-            manual_depth: ManualDepthEnum) -> bool:
+            manual_depth: ManualDepthEnum,
+            thread_id: int) -> bool:
         """
         Update log depth.
 
@@ -519,13 +557,14 @@ class LoggerStreamHandlerBase(ABC):
         @param expected_parent_fm_name: Expected parent frame name.
         @param parent_stack_list:  parent frame stack list.
         @param manual_depth: Manual depth.
+        @param thread_id: Thread id.
         @return: True in case increase depth, else False.
         """
 
         # In case this is log in child method
         if self.__is_increased_child_depth(
                 expected_parent_fm_name, parent_stack_list):
-            self.__update_depth_for_increased_child_depth(fm_name)
+            self.__update_depth_for_increased_child_depth(fm_name, thread_id)
             return True
 
         # In case the log is in the same method of previous log
@@ -533,49 +572,50 @@ class LoggerStreamHandlerBase(ABC):
                 expected_parent_fm_name, stack_list):
             is_child = \
                 self.__update_depth_for_change_in_manual_depth(
-                    fm_name, manual_depth)
+                    fm_name, manual_depth, thread_id)
             return is_child
 
         # In case go up in the stack so search previous parent
         self.__update_depth_for_go_up_in_stack(
-            stack_list, manual_depth)
+            stack_list, manual_depth, thread_id)
         return False
 
     def __update_depth_for_go_up_in_stack(
-            self, stack_list: list[str], manual_depth: ManualDepthEnum):
+            self,
+            stack_list: list[str],
+            manual_depth: ManualDepthEnum,
+            thread_id: int):
 
         reverse_depth = 0
 
-        for i, parent in enumerate(reversed(self._depth_list)):
+        for i, parent in enumerate(
+                reversed(self._depth_list_dict[thread_id])):
             if parent.name in stack_list:
-                self._depth -= reverse_depth
+                self._depth_dict[thread_id] -= reverse_depth
 
-                if self._depth < 0:
-                    self._depth = 0
+                if self._depth_dict[thread_id] < 0:
+                    self._depth_dict[thread_id] = 0
 
                 for _ in range(i):
-                    self._depth_list.pop()
+                    self._depth_list_dict[thread_id].pop()
 
                 if manual_depth.value:
                     self.__update_depth_for_change_in_manual_depth(
-                        stack_list[0], manual_depth)
+                        stack_list[0], manual_depth, thread_id)
                 else:
-                    self._depth_list.append(DepthData(name=stack_list[0]))
+                    self._depth_list_dict[thread_id].append(
+                        DepthData(name=stack_list[0]))
                 return
 
             reverse_depth += parent.manual_depth_change + 1
 
         if manual_depth.value:
             self.__update_depth_for_change_in_manual_depth(
-                stack_list[0], manual_depth)
+                stack_list[0], manual_depth, thread_id)
         else:
-            self._depth_list = [DepthData(name=stack_list[0])]
-            self._depth = 0
-
-    def __write(self, s: str):
-        self._lock.acquire()
-        self._stream.write(s)
-        self._lock.release()
+            self._depth_list_dict[thread_id] = \
+                [DepthData(name=stack_list[0])]
+            self._depth_dict[thread_id] = 0
 
     def __get_stack_list(
             self, start_index: int) -> (list[str], list[FrameInfo]):
@@ -595,15 +635,16 @@ class LoggerStreamHandlerBase(ABC):
             msg: str,
             log_level: LogLevelEnum,
             is_child: bool,
-            stack_list: list[FrameInfo]) -> str:
+            stack_list: list[FrameInfo],
+            thread_id: int) -> str:
         depth_spaces = \
             ''.join(
                 [f'{self.YAML_SPACES_SEPARATOR}  '
-                 for _ in range(self._depth)])
+                 for _ in range(self._depth_dict[thread_id])])
 
         yaml_str = ''
 
-        if self._depth > 0:
+        if self._depth_dict[thread_id] > 0:
             if is_child:
                 yaml_str = f'\n{depth_spaces[:-2]}- '
             else:
@@ -618,7 +659,7 @@ class LoggerStreamHandlerBase(ABC):
             self.__create_yaml_elements(
                 depth_spaces, log_level, path, method, line_number, msg)
 
-        if self._depth > 0:
+        if self._depth_dict[thread_id] > 0:
             yaml_elements_str = \
                 yaml_elements_str[len(f'\n{depth_spaces[:-2]}- '):]
 
@@ -688,11 +729,12 @@ class LoggerStreamHandlerBase(ABC):
             msg: str,
             log_level: LogLevelEnum,
             is_child: bool,
-            stack_list: list[FrameInfo]) -> str:
+            stack_list: list[FrameInfo],
+            thread_id: int) -> str:
         depth_spaces = \
             ''.join(
                 [f'{self.YAML_SPACES_SEPARATOR}  '
-                 for _ in range(self._depth)])
+                 for _ in range(self._depth_dict[thread_id])])
 
         sf = stack_list[0]
 
@@ -753,37 +795,46 @@ class LoggerStreamHandlerBase(ABC):
             f'{depth_spaces}{LogElementEnum.DATE.value}:' \
             f' {datetime.now().strftime(self.log_date_format.date_format)}'
 
-    def __update_depth_for_manual_increased_child_depth(self, fm_name: str):
-        latest_fm_depth = self.__get_latest_fm_depth(fm_name)
+    def __update_depth_for_manual_increased_child_depth(
+            self, fm_name: str, thread_id: int):
+        latest_fm_depth = self.__get_latest_fm_depth(fm_name, thread_id)
         depth_data = DepthData(name=fm_name)
         depth_data.manual_depth_change = 1
         depth_data.total_manual_depth = latest_fm_depth.total_manual_depth + 1
-        self._depth += 1
-        self._depth_list.append(depth_data)
 
-    def __update_depth_for_manual_decreased_child_depth(self, fm_name: str):
-        latest_fm_depth = self.__get_latest_fm_depth(fm_name)
+        self._depth_dict[thread_id] += 1
 
-        if self._depth > 0 \
+        self._depth_list_dict[thread_id].append(depth_data)
+
+    def __update_depth_for_manual_decreased_child_depth(
+            self, fm_name: str, thread_id: int):
+        latest_fm_depth = self.__get_latest_fm_depth(fm_name, thread_id)
+
+        if self._depth_dict[thread_id] > 0 \
                 and latest_fm_depth.total_manual_depth > 0:
             depth_data = DepthData(name=fm_name)
             depth_data.manual_depth_change = -1
             depth_data.total_manual_depth = \
                 latest_fm_depth.total_manual_depth - 1
-            self._depth -= 1
+            self._depth_dict[thread_id] -= 1
 
-    def __update_depth_for_increased_child_depth(self, fm_name: str):
-        self._depth_list.append(DepthData(name=fm_name))
-        self._depth += 1
+    def __update_depth_for_increased_child_depth(
+            self, fm_name: str, thread_id: int):
+        self._depth_list_dict[thread_id].append(DepthData(name=fm_name))
+        self._depth_dict[thread_id] += 1
 
     def __update_depth_for_change_in_manual_depth(
-            self, fm_name: str, manual_depth: ManualDepthEnum):
+            self, fm_name: str,
+            manual_depth: ManualDepthEnum,
+            thread_id: int):
         if manual_depth == ManualDepthEnum.INCREASE:
-            self.__update_depth_for_manual_increased_child_depth(fm_name)
+            self.__update_depth_for_manual_increased_child_depth(
+                fm_name, thread_id)
             return True
 
         if manual_depth == ManualDepthEnum.DECREASE:
-            self.__update_depth_for_manual_decreased_child_depth(fm_name)
+            self.__update_depth_for_manual_decreased_child_depth(
+                fm_name, thread_id)
 
         return False
 
@@ -793,6 +844,31 @@ class LoggerStreamHandlerBase(ABC):
             '\nNRT-Logging DEBUG:\n' \
             f'Start Index: {self.__stack_log_start_index}\n' \
             + '\n'.join(debug_st_str_list)
+
+    def __add_new_thread_id_to_dicts(self, thread_id: int):
+        if self._depth_dict.get(thread_id) is None:
+            self._depth_dict[thread_id] = 0
+            self._depth_list_dict[thread_id] = []
+            self._increase_depth_list_dict[thread_id] = []
+            self._decrease_depth_list_dict[thread_id] = []
+
+    def __clean_threads_dicts(self):
+        if self.__clean_threads_counter > self.__CLEAN_THREADS_COUNT:
+            self.__clean_threads_counter = 0
+            current_thread_id_list = \
+                [thread.ident for thread in threading.enumerate()]
+            logger_thread_id_list = list(self._depth_list_dict)
+
+            dead_threads_list = \
+                set(logger_thread_id_list) - set(current_thread_id_list)
+
+            for thread_id in dead_threads_list:
+                self._depth_dict.pop(thread_id)
+                self._depth_list_dict.pop(thread_id)
+                self._increase_depth_list_dict.pop(thread_id)
+                self._decrease_depth_list_dict.pop(thread_id)
+        elif len(self._depth_list_dict) >= self._CLEAN_THREADS_DICTS:
+            self.__clean_threads_counter += 1
 
     @classmethod
     def set_log_level(cls, level: LogLevelEnum):
@@ -1074,9 +1150,8 @@ class FileStreamHandler(LoggerStreamHandlerBase):
             file_size = getsize(self.__file_path)
 
             if file_size >= self.max_file_size:
-                self._lock.acquire()
-                archive_file_path = self.__archive_log()
-                self._lock.release()
+                with self._lock:
+                    archive_file_path = self.__archive_log()
 
                 t = \
                     Thread(

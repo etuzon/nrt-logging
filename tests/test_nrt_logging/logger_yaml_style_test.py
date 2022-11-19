@@ -175,7 +175,7 @@ class NrtLoggerManagerTests(unittest.TestCase):
             so.split(LoggerStreamHandlerBase.YAML_DOCUMENT_SEPARATOR)
 
         # First element is empty
-        self.assertEqual(len(log_doc_list), 4)
+        self.assertEqual(4, len(log_doc_list))
 
         cb_a_ca_a_ca_b_yaml = yaml.safe_load(log_doc_list[1])
 

@@ -6,4 +6,4 @@ Version 1.2.0:
         Limit logger file size, split, and zip log files.
 """
 
-__version__ = '1.2.3'
+__version__ = '1.2.4'
