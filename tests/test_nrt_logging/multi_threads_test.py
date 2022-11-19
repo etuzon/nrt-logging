@@ -16,7 +16,7 @@ C_MSG_1 = 'C METHOD 1'
 
 
 class LoggerThread(Thread):
-    __LOOP = 30
+    __LOOP = 200
 
     __logger: NrtLogger
 

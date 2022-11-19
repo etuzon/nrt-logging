@@ -159,12 +159,17 @@ class LoggerStreamHandlerBase(ABC):
         f':{LogElementEnum.LINE_NUMBER.line_format}]' \
         f' {LogElementEnum.MESSAGE.line_format}'
 
+    _CLEAN_THREADS_DICTS = 100
+    __CLEAN_THREADS_COUNT = 2000
+
     _log_date_format: Optional[LogDateFormat] = None
     _log_yaml_elements: Optional[LogYamlElements] = None
 
     _stream: Optional[IO] = None
 
     _lock: Lock
+
+    __clean_threads_counter: int
     __stack_log_start_index: int
     __stack_log_increase_start_index: int
     __stack_log_decrease_start_index: int
@@ -213,6 +218,7 @@ class LoggerStreamHandlerBase(ABC):
         self._depth_list_dict = {thread_id: []}
         self._increase_depth_list_dict = {thread_id: []}
         self._decrease_depth_list_dict = {thread_id: []}
+        self.__clean_threads_counter = 0
         self._lock = Lock()
 
     @abstractmethod
@@ -397,6 +403,8 @@ class LoggerStreamHandlerBase(ABC):
                         thread_id)
 
                 self._stream.write(f'{log_str}\n')
+
+                self.__clean_threads_dicts()
 
     def __get_latest_fm_depth(self, fm_name: str, thread_id: int) -> Optional[DepthData]:
         for fm_depth in reversed(self._depth_list_dict[thread_id]):
@@ -843,6 +851,24 @@ class LoggerStreamHandlerBase(ABC):
             self._depth_list_dict[thread_id] = []
             self._increase_depth_list_dict[thread_id] = []
             self._decrease_depth_list_dict[thread_id] = []
+
+    def __clean_threads_dicts(self):
+        if self.__clean_threads_counter > self.__CLEAN_THREADS_COUNT:
+            self.__clean_threads_counter = 0
+            current_thread_id_list = \
+                [thread.ident for thread in threading.enumerate()]
+            logger_thread_id_list = list(self._depth_list_dict)
+
+            dead_threads_list = \
+                set(logger_thread_id_list) - set(current_thread_id_list)
+
+            for thread_id in dead_threads_list:
+                self._depth_dict.pop(thread_id)
+                self._depth_list_dict.pop(thread_id)
+                self._increase_depth_list_dict.pop(thread_id)
+                self._decrease_depth_list_dict.pop(thread_id)
+        elif len(self._depth_list_dict) >= self._CLEAN_THREADS_DICTS:
+            self.__clean_threads_counter += 1
 
     @classmethod
     def set_log_level(cls, level: LogLevelEnum):
