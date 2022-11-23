@@ -805,12 +805,10 @@ class LoggerStreamHandlerBase(ABC):
         latest_fm_depth = self.__get_latest_fm_depth(fm_name, thread_id)
 
         if latest_fm_depth is None:
-            """
-            Scenario:
-            1. thread_1: Time: 0, logger.info('msg')
-            2. thread_1: Time: 1, logger.increase_depth()
-            3. thread_2: Time: 2, Same logger.info('msg') of thread_1
-            """
+            # Scenario:
+            #   1. thread_1: Time: 0, logger.info('msg')
+            #   2. thread_1: Time: 1, logger.increase_depth()
+            #   3. thread_2: Time: 2, Same logger.info('msg') of thread_1
             return False
 
         depth_data = DepthData(name=fm_name)
