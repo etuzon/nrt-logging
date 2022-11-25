@@ -173,7 +173,6 @@ class LoggerStreamHandlerBase(ABC):
     _stream: Optional[IO] = None
 
     _lock: Lock
-    _snapshot_lock: Lock
 
     __clean_threads_counter: int
     __stack_log_start_index: int
@@ -226,7 +225,6 @@ class LoggerStreamHandlerBase(ABC):
         self._decrease_depth_list_dict = {thread_id: []}
         self.__clean_threads_counter = 0
         self._lock = Lock()
-        self._snapshot_lock = Lock()
 
     @abstractmethod
     def critical(
@@ -392,7 +390,7 @@ class LoggerStreamHandlerBase(ABC):
         stack_str_list, stack_list = \
             self.__get_stack_list(start_index=self.__stack_log_start_index)
 
-        with self._snapshot_lock:
+        with self._lock:
             snapshot_str = \
                 self.__SNAPSHOT_SEPERATOR.join(
                     [self.__get_method_snapshot(
@@ -403,9 +401,56 @@ class LoggerStreamHandlerBase(ABC):
             self.__stack_log_start_index += 1
 
             try:
-                self.trace(f'\n{snapshot_str}', manual_depth)
+                self._log(
+                    LogLevelEnum.TRACE,
+                    f'\n{snapshot_str}',
+                    manual_depth,
+                    is_lock=False)
             finally:
                 self.__stack_log_start_index = stack_log_start_index
+
+    def _log(
+            self,
+            log_level: LogLevelEnum,
+            msg: str,
+            manual_depth: ManualDepthEnum = ManualDepthEnum.NO_CHANGE,
+            is_lock: bool = True):
+
+        if log_level >= self.log_level:
+            stack_str_list, stack_list = \
+                self.__get_stack_list(start_index=self.__stack_log_start_index)
+
+            try:
+                self._lock.acquire(is_lock)
+                if isinstance(msg, bytes):
+                    msg = msg.decode('utf-8')
+
+                if self.is_debug:
+                    msg += self.__add_debug_to_message()
+
+                thread_id = threading.get_ident()
+
+                self.__add_new_thread_id_to_dicts(thread_id)
+
+                manual_depth = \
+                    self.__update_manual_depth(
+                        stack_str_list[0], manual_depth, thread_id)
+
+                log_str = \
+                    self.__create_log_str(
+                        msg,
+                        log_level,
+                        stack_str_list,
+                        stack_list,
+                        manual_depth,
+                        thread_id)
+
+                self._stream.write(f'{log_str}\n')
+
+                self.__clean_threads_dicts()
+            finally:
+                if is_lock:
+                    self._lock.release()
 
     def __get_method_snapshot(
             self, frame_name: str, frame_info: FrameInfo) -> str:
@@ -441,44 +486,6 @@ class LoggerStreamHandlerBase(ABC):
             self_str = f'self:\n{self_str}'
 
         return self_str
-
-    def _log(
-            self,
-            log_level: LogLevelEnum,
-            msg: str,
-            manual_depth: ManualDepthEnum = ManualDepthEnum.NO_CHANGE):
-
-        if log_level >= self.log_level:
-            stack_str_list, stack_list = \
-                self.__get_stack_list(start_index=self.__stack_log_start_index)
-
-            with self._lock:
-                if isinstance(msg, bytes):
-                    msg = msg.decode('utf-8')
-
-                if self.is_debug:
-                    msg += self.__add_debug_to_message()
-
-                thread_id = threading.get_ident()
-
-                self.__add_new_thread_id_to_dicts(thread_id)
-
-                manual_depth = \
-                    self.__update_manual_depth(
-                        stack_str_list[0], manual_depth, thread_id)
-
-                log_str = \
-                    self.__create_log_str(
-                        msg,
-                        log_level,
-                        stack_str_list,
-                        stack_list,
-                        manual_depth,
-                        thread_id)
-
-                self._stream.write(f'{log_str}\n')
-
-                self.__clean_threads_dicts()
 
     def __get_latest_fm_depth(
             self, fm_name: str, thread_id: int) -> Optional[DepthData]:
@@ -1248,12 +1255,13 @@ class FileStreamHandler(LoggerStreamHandlerBase):
             self,
             log_level: LogLevelEnum,
             msg: str,
-            manual_depth: ManualDepthEnum = ManualDepthEnum.NO_CHANGE):
+            manual_depth: ManualDepthEnum = ManualDepthEnum.NO_CHANGE,
+            is_lock: bool = True):
 
         self.__limit_file_size()
 
         self._stream = open(self.__file_path, 'a')
-        super()._log(log_level, msg, manual_depth)
+        super()._log(log_level, msg, manual_depth, is_lock)
         self.close()
 
     def __limit_file_size(self):
