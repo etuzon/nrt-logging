@@ -1,4 +1,3 @@
-import unittest
 from deepdiff import DeepDiff
 import yaml
 from nrt_logging.log_format import LogElementEnum
@@ -9,7 +8,7 @@ from nrt_logging.logger_stream_handlers import \
     ConsoleStreamHandler, ManualDepthEnum, \
     LoggerStreamHandlerBase, LogStyleEnum
 from tests.test_nrt_logging.test_base import \
-    stdout_redirect, NAME_1, r_stdout
+    stdout_redirect, NAME_1, r_stdout, TestBase
 
 
 class Child:
@@ -87,7 +86,7 @@ CB_B_LINE = 63
 TEST_FILE_NAME = 'logger_yaml_style_test.py'
 
 
-class NrtLoggerManagerTests(unittest.TestCase):
+class NrtLoggerManagerTests(TestBase):
 
     @classmethod
     def setUpClass(cls):

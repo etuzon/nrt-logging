@@ -147,6 +147,7 @@ DEFAULT_FILES_AMOUNT = 10
 
 
 class LoggerStreamHandlerBase(ABC):
+    SNAPSHOT_METHODS_DEPTH = 1
     YAML_SPACES_SEPARATOR = ' ' * 2
     YAML_CHILDREN_SPACES_SEPARATOR = ' ' * 4
     YAML_DOCUMENT_SEPARATOR = '---'
@@ -162,12 +163,17 @@ class LoggerStreamHandlerBase(ABC):
     _CLEAN_THREADS_DICTS = 100
     __CLEAN_THREADS_COUNT = 2000
 
+    __SNAPSHOT_SEPERATOR = \
+        '\n====================================' \
+        '====================================\n'
+
     _log_date_format: Optional[LogDateFormat] = None
     _log_yaml_elements: Optional[LogYamlElements] = None
 
     _stream: Optional[IO] = None
 
     _lock: Lock
+    _snapshot_lock: Lock
 
     __clean_threads_counter: int
     __stack_log_start_index: int
@@ -220,6 +226,7 @@ class LoggerStreamHandlerBase(ABC):
         self._decrease_depth_list_dict = {thread_id: []}
         self.__clean_threads_counter = 0
         self._lock = Lock()
+        self._snapshot_lock = Lock()
 
     @abstractmethod
     def critical(
@@ -260,6 +267,13 @@ class LoggerStreamHandlerBase(ABC):
     def trace(
             self,
             msg: str,
+            manual_depth: ManualDepthEnum = ManualDepthEnum.NO_CHANGE):
+        raise NotImplementedCodeException
+
+    @abstractmethod
+    def snapshot(
+            self,
+            methods_depth: int = SNAPSHOT_METHODS_DEPTH,
             manual_depth: ManualDepthEnum = ManualDepthEnum.NO_CHANGE):
         raise NotImplementedCodeException
 
@@ -370,6 +384,63 @@ class LoggerStreamHandlerBase(ABC):
     @is_debug.setter
     def is_debug(self, is_debug: bool):
         self._is_debug = is_debug
+
+    def _snapshot(
+            self,
+            methods_depth: int,
+            manual_depth: ManualDepthEnum = ManualDepthEnum.NO_CHANGE):
+        stack_str_list, stack_list = \
+            self.__get_stack_list(start_index=self.__stack_log_start_index)
+
+        with self._snapshot_lock:
+            snapshot_str = \
+                self.__SNAPSHOT_SEPERATOR.join(
+                    [self.__get_method_snapshot(
+                        stack_str_list[i], stack_list[i])
+                        for i in range(min(methods_depth, len(stack_list)))])
+
+            stack_log_start_index = self.__stack_log_start_index
+            self.__stack_log_start_index += 1
+
+            try:
+                self.trace(f'\n{snapshot_str}', manual_depth)
+            finally:
+                self.__stack_log_start_index = stack_log_start_index
+
+    def __get_method_snapshot(
+            self, frame_name: str, frame_info: FrameInfo) -> str:
+        return \
+            f'Frame: {frame_name}\n' \
+            f'{self.__get_f_locals_snapshot(frame_info.frame.f_locals)}'
+
+    def __get_f_locals_snapshot(self, f_locals: dict):
+        f_locals_str = \
+            'Method vars:\n' + '\n'.join(
+                [f'{self.YAML_SPACES_SEPARATOR}{name}: {var}'
+                 for name, var in f_locals.items()
+                 if name != 'self']
+            )
+
+        self_ = f_locals.get('self')
+
+        if self_:
+            f_locals_str += f'\n{self.__get_self_snapshot(self_)}'
+
+        return f_locals_str
+
+    def __get_self_snapshot(self, self_):
+        self_str = ''
+
+        for attr_name in dir(self_):
+            attr = self_.__getattribute__(attr_name)
+
+            if self.__is_variable(attr, attr_name):
+                self_str += f'{self.YAML_SPACES_SEPARATOR}{attr_name}: {attr}\n'
+
+        if self_str:
+            self_str = f'self:\n{self_str}'
+
+        return self_str
 
     def _log(
             self,
@@ -504,7 +575,8 @@ class LoggerStreamHandlerBase(ABC):
                 msg, log_level, is_child, stack_list, thread_id)
 
     def __create_log_str_suffix(
-            self, msg: str,
+            self,
+            msg: str,
             log_level: LogLevelEnum,
             is_child: bool,
             stack_list: list[FrameInfo],
@@ -906,6 +978,21 @@ class LoggerStreamHandlerBase(ABC):
         cls._log_line_template = log_line_template
 
     @classmethod
+    def __is_variable(cls, obj_value, attr_name: str) -> bool:
+        is_var =  \
+            not attr_name.startswith('__') \
+            and not attr_name.endswith('__') \
+            and not attr_name.isupper()
+
+        if not is_var:
+            return False
+
+        if isinstance(obj_value, str):
+            return True
+
+        return 'method' not in str(obj_value)
+
+    @classmethod
     def __is_increased_child_depth(
             cls,
             parent_fm_name: str,
@@ -1039,6 +1126,12 @@ class ConsoleStreamHandler(LoggerStreamHandlerBase):
             manual_depth: ManualDepthEnum = ManualDepthEnum.NO_CHANGE):
         self._log(LogLevelEnum.TRACE, msg, manual_depth)
 
+    def snapshot(
+            self,
+            methods_depth: int = LoggerStreamHandlerBase.SNAPSHOT_METHODS_DEPTH,
+            manual_depth: ManualDepthEnum = ManualDepthEnum.NO_CHANGE):
+        self._snapshot(methods_depth, manual_depth)
+
     def close(self):
         """
         close function not relevant for ConsoleStreamHandler.
@@ -1102,6 +1195,12 @@ class FileStreamHandler(LoggerStreamHandlerBase):
             msg: str,
             manual_depth: ManualDepthEnum = ManualDepthEnum.NO_CHANGE):
         self._log(LogLevelEnum.TRACE, msg, manual_depth)
+
+    def snapshot(
+            self,
+            methods_depth: int = LoggerStreamHandlerBase.SNAPSHOT_METHODS_DEPTH,
+            manual_depth: ManualDepthEnum = ManualDepthEnum.NO_CHANGE):
+        self._snapshot(methods_depth, manual_depth)
 
     def close(self):
         if self._stream is not None:
