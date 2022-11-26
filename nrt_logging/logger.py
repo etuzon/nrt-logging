@@ -165,6 +165,10 @@ class NrtLogger:
         self.__log_level = log_level
 
     @property
+    def stream_handler_list(self) -> list[LoggerStreamHandlerBase]:
+        return self.__stream_handler_list
+
+    @property
     def is_debug(self) -> bool:
         return self.__is_debug
 

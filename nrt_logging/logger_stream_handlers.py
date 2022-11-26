@@ -164,7 +164,7 @@ class LoggerStreamHandlerBase(ABC):
     __CLEAN_THREADS_COUNT = 2000
 
     __SNAPSHOT_SEPERATOR = \
-        '\n====================================' \
+        '====================================' \
         '====================================\n'
 
     _log_date_format: Optional[LogDateFormat] = None
@@ -175,7 +175,7 @@ class LoggerStreamHandlerBase(ABC):
     _lock: Lock
 
     __clean_threads_counter: int
-    __stack_log_start_index: int
+    _stack_log_start_index: int
     __stack_log_increase_start_index: int
     __stack_log_decrease_start_index: int
     _log_level: Optional[LogLevelEnum] = None
@@ -199,7 +199,7 @@ class LoggerStreamHandlerBase(ABC):
             stack_log_increase_start_index: int = 3,
             stack_log_decrease_start_index: int = 3):
 
-        self.__stack_log_start_index = stack_log_start_index
+        self._stack_log_start_index = stack_log_start_index
         self.__stack_log_increase_start_index = stack_log_increase_start_index
         self.__stack_log_decrease_start_index = stack_log_decrease_start_index
 
@@ -387,8 +387,19 @@ class LoggerStreamHandlerBase(ABC):
             self,
             methods_depth: int,
             manual_depth: ManualDepthEnum = ManualDepthEnum.NO_CHANGE):
+
+        if methods_depth < 1:
+            raise ValueError(
+                f'Logger methods_depth value [{methods_depth}]'
+                f' cannot be less than 1')
+
+        if isinstance(self, FileStreamHandler):
+            stack_log_start_index = self._stack_log_start_index - 1
+        else:
+            stack_log_start_index = self._stack_log_start_index
+
         stack_str_list, stack_list = \
-            self.__get_stack_list(start_index=self.__stack_log_start_index)
+            self.__get_stack_list(start_index=stack_log_start_index)
 
         with self._lock:
             snapshot_str = \
@@ -397,8 +408,8 @@ class LoggerStreamHandlerBase(ABC):
                         stack_str_list[i], stack_list[i])
                         for i in range(min(methods_depth, len(stack_list)))])
 
-            stack_log_start_index = self.__stack_log_start_index
-            self.__stack_log_start_index += 1
+            stack_log_start_index = self._stack_log_start_index
+            self._stack_log_start_index += 1
 
             try:
                 self._log(
@@ -407,7 +418,7 @@ class LoggerStreamHandlerBase(ABC):
                     manual_depth,
                     is_lock=False)
             finally:
-                self.__stack_log_start_index = stack_log_start_index
+                self._stack_log_start_index = stack_log_start_index
 
     def _log(
             self,
@@ -418,7 +429,7 @@ class LoggerStreamHandlerBase(ABC):
 
         if log_level >= self.log_level:
             stack_str_list, stack_list = \
-                self.__get_stack_list(start_index=self.__stack_log_start_index)
+                self.__get_stack_list(start_index=self._stack_log_start_index)
 
             try:
                 self._lock.acquire(is_lock)
@@ -936,7 +947,7 @@ class LoggerStreamHandlerBase(ABC):
         debug_st_str_list, _ = self.__get_stack_list(start_index=1)
         return \
             '\nNRT-Logging DEBUG:\n' \
-            f'Start Index: {self.__stack_log_start_index}\n' \
+            f'Start Index: {self._stack_log_start_index}\n' \
             + '\n'.join(debug_st_str_list)
 
     def __add_new_thread_id_to_dicts(self, thread_id: int):
@@ -1081,7 +1092,7 @@ class LoggerStreamHandlerBase(ABC):
 
     @classmethod
     def __create_fm_name(cls, path: str, method: str) -> str:
-        return f'{path}_{method}'
+        return f'{path}.{method}'
 
     @classmethod
     def __get_yaml_multiline_operator(cls, yaml_text: str):
@@ -1260,9 +1271,11 @@ class FileStreamHandler(LoggerStreamHandlerBase):
 
         self.__limit_file_size()
 
-        self._stream = open(self.__file_path, 'a')
-        super()._log(log_level, msg, manual_depth, is_lock)
-        self.close()
+        try:
+            self._stream = open(self.__file_path, 'a')
+            super()._log(log_level, msg, manual_depth, is_lock)
+        finally:
+            self.close()
 
     def __limit_file_size(self):
         if self.is_limit_file_size:

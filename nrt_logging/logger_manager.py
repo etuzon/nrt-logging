@@ -9,34 +9,34 @@ from nrt_logging.logger_stream_handlers import LoggerStreamHandlerBase
 
 class NrtLoggerManager:
     __is_running: bool = False
-    __logger_dict: dict[str, NrtLogger]
+    __loggers_dict: dict[str, NrtLogger]
     __logger_manager_config: Optional[LoggerManagerConfig] = None
 
     __is_debug: bool = False
 
     def __init__(self):
         self.__verify_not_initiated()
-        self.__logger_dict = {}
+        self.__loggers_dict = {}
 
     def get_logger(self, name: str) -> NrtLogger:
 
-        if self.__logger_dict.get(name) is None:
-            self.__logger_dict[name] = NrtLogger()
+        if self.__loggers_dict.get(name) is None:
+            self.__loggers_dict[name] = NrtLogger()
 
         if self.__is_debug:
-            self.__logger_dict[name].is_debug = self.__is_debug
+            self.__loggers_dict[name].is_debug = self.__is_debug
 
-        return self.__logger_dict[name]
+        return self.__loggers_dict[name]
 
     def close_logger(self, name: str):
-        logger = self.__logger_dict.get(name)
+        logger = self.__loggers_dict.get(name)
 
         if logger:
             logger.close_stream_handlers()
-            self.__logger_dict.pop(name)
+            self.__loggers_dict.pop(name)
 
     def close_all_loggers(self):
-        logger_dict = self.__logger_dict.copy()
+        logger_dict = self.__loggers_dict.copy()
 
         for name in logger_dict.keys():
             self.close_logger(name)
@@ -51,6 +51,10 @@ class NrtLoggerManager:
 
         for lc in self.__logger_manager_config.loggers_config.values():
             self.__build_logger_from_config(lc, stream_handler_list)
+
+    @property
+    def loggers_dict(self) -> dict[str, NrtLogger]:
+        return self.__loggers_dict
 
     @property
     def is_debug(self) -> bool:

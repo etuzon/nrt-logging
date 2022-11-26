@@ -444,6 +444,22 @@ class NrtLoggerManagerTests(TestBase):
 
         self.__verify_yaml_dict(yaml_dict, expected_yaml_dict)
 
+    def test_logger_manager_logger_dict(self):
+        name = 'test2'
+        logger_manager.get_logger(name)
+        loggers_dict = logger_manager.loggers_dict
+        self.assertIsNotNone(loggers_dict)
+        logger = loggers_dict.get(name)
+        self.assertTrue(isinstance(logger, NrtLogger))
+
+    def test_logger_stream_handler_list(self):
+        sh = ConsoleStreamHandler()
+        logger = logger_manager.get_logger(NAME_1)
+        logger.add_stream_handler(sh)
+        sh_list = logger.stream_handler_list
+        self.assertEqual(1, len(sh_list))
+        self.assertTrue(isinstance(sh_list[0], ConsoleStreamHandler))
+
     def __verify_yaml_dict(self, yaml_dict, expected_yaml_dict):
         exclude_path = f"\\['{LogElementEnum.DATE.value}'\\]$"
         cmp_diff = \
