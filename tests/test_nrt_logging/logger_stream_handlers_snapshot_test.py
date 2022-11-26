@@ -156,7 +156,7 @@ class StreamHandlersSnapshotTests(TestBase):
             self.assertIn(self.EXPECTED_METHOD_VARS_STR, log_lines[2])
             self.assertIn('i: 4', log_lines[3])
             self.assertIn(self.EXPECTED_SELF_STR, log_lines[4])
-            self.assertIn(f'_A__i: 4', log_lines[5])
+            self.assertIn('_A__i: 4', log_lines[5])
             self.assertIn(self.EXPECTED_A_LOGGER_STR, log_lines[6])
             self.assertIn('==============', log_lines[7])
             self.assertIn(
@@ -164,7 +164,7 @@ class StreamHandlersSnapshotTests(TestBase):
             self.assertIn(self.EXPECTED_METHOD_VARS_STR, log_lines[9])
             self.assertIn('m_i: 4', log_lines[10])
             self.assertIn(self.EXPECTED_SELF_STR, log_lines[11])
-            self.assertIn(f'_A__i: 4', log_lines[12])
+            self.assertIn('_A__i: 4', log_lines[12])
             self.assertIn(self.EXPECTED_A_LOGGER_STR, log_lines[13])
             self.assertIn('==============', log_lines[14])
 
@@ -177,7 +177,7 @@ class StreamHandlersSnapshotTests(TestBase):
                 log_lines[15])
             self.assertIn(self.EXPECTED_METHOD_VARS_STR, log_lines[16])
             self.assertIn(f'z: {z}', log_lines[17])
-            self.assertIn(f'c:', log_lines[18])
+            self.assertIn('c:', log_lines[18])
             self.assertIn(f'v_dict: {self.v_dict}', log_lines[-4])
             self.assertIn(f'v_int: {self.v_int}', log_lines[-3])
             self.assertIn(f'v_s: {self.v_s}', log_lines[-2])
