@@ -5,7 +5,7 @@ from nrt_logging.log_level import LogLevelEnum
 from nrt_logging.logger import NrtLogger
 from nrt_logging.logger_manager import logger_manager
 from nrt_logging.logger_stream_handlers import \
-    ConsoleStreamHandler, LogStyleEnum
+    ConsoleStreamHandler, LogStyleEnum, ManualDepthEnum
 from tests.test_nrt_logging.test_base import \
     TestBase, NAME_1, stdout_redirect, r_stdout
 
@@ -42,11 +42,13 @@ class LoggerThread1(Thread):
         self.__b()
         self.__logger.increase_depth()
         self.__logger.info(A_MSG_2)
+        self.__logger.snapshot()
         self.__logger.increase_depth()
         self.__logger.info(A_MSG_3)
 
     def __a3(self):
         self.__logger.info(A_MSG_1)
+        self.__logger.snapshot(manual_depth=ManualDepthEnum.INCREASE)
         self.__b()
         self.__logger.increase_depth()
         self.__logger.info(A_MSG_2)

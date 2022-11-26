@@ -102,6 +102,16 @@ class NrtLogger:
             for handler in self.__stream_handler_list:
                 handler.trace(msg, manual_depth)
 
+    def snapshot(
+            self,
+            methods_depth: int = LoggerStreamHandlerBase.SNAPSHOT_METHODS_DEPTH,
+            manual_depth: ManualDepthEnum = ManualDepthEnum.NO_CHANGE):
+        if self.log_level <= LogLevelEnum.TRACE:
+            self.__verify_stream_handler_list_not_empty()
+
+            for handler in self.__stream_handler_list:
+                handler.snapshot(methods_depth, manual_depth)
+
     def increase_depth(self):
         for handler in self.__stream_handler_list:
             handler.increase_depth()
@@ -153,6 +163,10 @@ class NrtLogger:
     @log_level.setter
     def log_level(self, log_level: LogLevelEnum):
         self.__log_level = log_level
+
+    @property
+    def stream_handler_list(self) -> list[LoggerStreamHandlerBase]:
+        return self.__stream_handler_list
 
     @property
     def is_debug(self) -> bool:

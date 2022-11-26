@@ -60,3 +60,31 @@ class Parent:
         self.__logger.info(self.INCREASE_MSG, ManualDepthEnum.INCREASE)
         self.__logger.info(self.DECREASE_MSG, ManualDepthEnum.DECREASE)
         self.__logger.error(self.MSG_2)
+
+
+class LogSnapshot:
+    j = 4
+    k = 5
+    __logger: NrtLogger
+
+    def __init__(self):
+        self.__logger = logger_manager.get_logger(NAME_1)
+
+    def a(self):
+        lcl = 6
+        self.__logger.warn(f'lcl: {6}')
+        self.__logger.info(
+            'Print a method snapshot as a child of previous log')
+        self.__logger.snapshot(manual_depth=ManualDepthEnum.INCREASE)
+        self.b(lcl)
+
+    def b(self, b_var: 1):
+        self.j = b_var
+        self.__logger.info('Print b method snapshot')
+        self.__logger.snapshot()
+        self.c()
+
+    def c(self):
+        self.__logger.info(
+            'Print snapshot of method and parent methods (3 levels)')
+        self.__logger.snapshot(methods_depth=3)

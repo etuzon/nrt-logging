@@ -147,6 +147,7 @@ DEFAULT_FILES_AMOUNT = 10
 
 
 class LoggerStreamHandlerBase(ABC):
+    SNAPSHOT_METHODS_DEPTH = 1
     YAML_SPACES_SEPARATOR = ' ' * 2
     YAML_CHILDREN_SPACES_SEPARATOR = ' ' * 4
     YAML_DOCUMENT_SEPARATOR = '---'
@@ -162,6 +163,10 @@ class LoggerStreamHandlerBase(ABC):
     _CLEAN_THREADS_DICTS = 100
     __CLEAN_THREADS_COUNT = 2000
 
+    __SNAPSHOT_SEPERATOR = \
+        '====================================' \
+        '====================================\n'
+
     _log_date_format: Optional[LogDateFormat] = None
     _log_yaml_elements: Optional[LogYamlElements] = None
 
@@ -170,7 +175,7 @@ class LoggerStreamHandlerBase(ABC):
     _lock: Lock
 
     __clean_threads_counter: int
-    __stack_log_start_index: int
+    _stack_log_start_index: int
     __stack_log_increase_start_index: int
     __stack_log_decrease_start_index: int
     _log_level: Optional[LogLevelEnum] = None
@@ -194,7 +199,7 @@ class LoggerStreamHandlerBase(ABC):
             stack_log_increase_start_index: int = 3,
             stack_log_decrease_start_index: int = 3):
 
-        self.__stack_log_start_index = stack_log_start_index
+        self._stack_log_start_index = stack_log_start_index
         self.__stack_log_increase_start_index = stack_log_increase_start_index
         self.__stack_log_decrease_start_index = stack_log_decrease_start_index
 
@@ -260,6 +265,13 @@ class LoggerStreamHandlerBase(ABC):
     def trace(
             self,
             msg: str,
+            manual_depth: ManualDepthEnum = ManualDepthEnum.NO_CHANGE):
+        raise NotImplementedCodeException
+
+    @abstractmethod
+    def snapshot(
+            self,
+            methods_depth: int = SNAPSHOT_METHODS_DEPTH,
             manual_depth: ManualDepthEnum = ManualDepthEnum.NO_CHANGE):
         raise NotImplementedCodeException
 
@@ -371,17 +383,56 @@ class LoggerStreamHandlerBase(ABC):
     def is_debug(self, is_debug: bool):
         self._is_debug = is_debug
 
+    def _snapshot(
+            self,
+            methods_depth: int,
+            manual_depth: ManualDepthEnum = ManualDepthEnum.NO_CHANGE):
+
+        if methods_depth < 1:
+            raise ValueError(
+                f'Logger methods_depth value [{methods_depth}]'
+                f' cannot be less than 1')
+
+        if isinstance(self, FileStreamHandler):
+            stack_log_start_index = self._stack_log_start_index - 1
+        else:
+            stack_log_start_index = self._stack_log_start_index
+
+        stack_str_list, stack_list = \
+            self.__get_stack_list(start_index=stack_log_start_index)
+
+        with self._lock:
+            snapshot_str = \
+                self.__SNAPSHOT_SEPERATOR.join(
+                    [self.__get_method_snapshot(
+                        stack_str_list[i], stack_list[i])
+                        for i in range(min(methods_depth, len(stack_list)))])
+
+            stack_log_start_index = self._stack_log_start_index
+            self._stack_log_start_index += 1
+
+            try:
+                self._log(
+                    LogLevelEnum.TRACE,
+                    f'\n{snapshot_str}',
+                    manual_depth,
+                    is_lock=False)
+            finally:
+                self._stack_log_start_index = stack_log_start_index
+
     def _log(
             self,
             log_level: LogLevelEnum,
             msg: str,
-            manual_depth: ManualDepthEnum = ManualDepthEnum.NO_CHANGE):
+            manual_depth: ManualDepthEnum = ManualDepthEnum.NO_CHANGE,
+            is_lock: bool = True):
 
         if log_level >= self.log_level:
             stack_str_list, stack_list = \
-                self.__get_stack_list(start_index=self.__stack_log_start_index)
+                self.__get_stack_list(start_index=self._stack_log_start_index)
 
-            with self._lock:
+            try:
+                self._lock.acquire(is_lock)
                 if isinstance(msg, bytes):
                     msg = msg.decode('utf-8')
 
@@ -408,6 +459,44 @@ class LoggerStreamHandlerBase(ABC):
                 self._stream.write(f'{log_str}\n')
 
                 self.__clean_threads_dicts()
+            finally:
+                if is_lock:
+                    self._lock.release()
+
+    def __get_method_snapshot(
+            self, frame_name: str, frame_info: FrameInfo) -> str:
+        return \
+            f'Frame: {frame_name}\n' \
+            f'{self.__get_f_locals_snapshot(frame_info.frame.f_locals)}'
+
+    def __get_f_locals_snapshot(self, f_locals: dict):
+        f_locals_str = \
+            'Method vars:\n' + '\n'.join(
+                [f'{self.YAML_SPACES_SEPARATOR}{name}: {var}'
+                 for name, var in f_locals.items()
+                 if name != 'self']
+            )
+
+        self_ = f_locals.get('self')
+
+        if self_:
+            f_locals_str += f'\n{self.__get_self_snapshot(self_)}'
+
+        return f_locals_str
+
+    def __get_self_snapshot(self, self_):
+        self_str = ''
+
+        for attr_name in dir(self_):
+            attr = self_.__getattribute__(attr_name)
+
+            if self.__is_variable(attr, attr_name):
+                self_str += f'{self.YAML_SPACES_SEPARATOR}{attr_name}: {attr}\n'
+
+        if self_str:
+            self_str = f'self:\n{self_str}'
+
+        return self_str
 
     def __get_latest_fm_depth(
             self, fm_name: str, thread_id: int) -> Optional[DepthData]:
@@ -504,7 +593,8 @@ class LoggerStreamHandlerBase(ABC):
                 msg, log_level, is_child, stack_list, thread_id)
 
     def __create_log_str_suffix(
-            self, msg: str,
+            self,
+            msg: str,
             log_level: LogLevelEnum,
             is_child: bool,
             stack_list: list[FrameInfo],
@@ -857,7 +947,7 @@ class LoggerStreamHandlerBase(ABC):
         debug_st_str_list, _ = self.__get_stack_list(start_index=1)
         return \
             '\nNRT-Logging DEBUG:\n' \
-            f'Start Index: {self.__stack_log_start_index}\n' \
+            f'Start Index: {self._stack_log_start_index}\n' \
             + '\n'.join(debug_st_str_list)
 
     def __add_new_thread_id_to_dicts(self, thread_id: int):
@@ -904,6 +994,21 @@ class LoggerStreamHandlerBase(ABC):
     @classmethod
     def set_log_line_template(cls, log_line_template: str):
         cls._log_line_template = log_line_template
+
+    @classmethod
+    def __is_variable(cls, obj_value, attr_name: str) -> bool:
+        is_var =  \
+            not attr_name.startswith('__') \
+            and not attr_name.endswith('__') \
+            and not attr_name.isupper()
+
+        if not is_var:
+            return False
+
+        if isinstance(obj_value, str):
+            return True
+
+        return 'method' not in str(obj_value)
 
     @classmethod
     def __is_increased_child_depth(
@@ -987,7 +1092,7 @@ class LoggerStreamHandlerBase(ABC):
 
     @classmethod
     def __create_fm_name(cls, path: str, method: str) -> str:
-        return f'{path}_{method}'
+        return f'{path}.{method}'
 
     @classmethod
     def __get_yaml_multiline_operator(cls, yaml_text: str):
@@ -1038,6 +1143,12 @@ class ConsoleStreamHandler(LoggerStreamHandlerBase):
             msg: str,
             manual_depth: ManualDepthEnum = ManualDepthEnum.NO_CHANGE):
         self._log(LogLevelEnum.TRACE, msg, manual_depth)
+
+    def snapshot(
+            self,
+            methods_depth: int = LoggerStreamHandlerBase.SNAPSHOT_METHODS_DEPTH,
+            manual_depth: ManualDepthEnum = ManualDepthEnum.NO_CHANGE):
+        self._snapshot(methods_depth, manual_depth)
 
     def close(self):
         """
@@ -1103,6 +1214,12 @@ class FileStreamHandler(LoggerStreamHandlerBase):
             manual_depth: ManualDepthEnum = ManualDepthEnum.NO_CHANGE):
         self._log(LogLevelEnum.TRACE, msg, manual_depth)
 
+    def snapshot(
+            self,
+            methods_depth: int = LoggerStreamHandlerBase.SNAPSHOT_METHODS_DEPTH,
+            manual_depth: ManualDepthEnum = ManualDepthEnum.NO_CHANGE):
+        self._snapshot(methods_depth, manual_depth)
+
     def close(self):
         if self._stream is not None:
             self._stream.close()
@@ -1149,13 +1266,16 @@ class FileStreamHandler(LoggerStreamHandlerBase):
             self,
             log_level: LogLevelEnum,
             msg: str,
-            manual_depth: ManualDepthEnum = ManualDepthEnum.NO_CHANGE):
+            manual_depth: ManualDepthEnum = ManualDepthEnum.NO_CHANGE,
+            is_lock: bool = True):
 
         self.__limit_file_size()
 
-        self._stream = open(self.__file_path, 'a')
-        super()._log(log_level, msg, manual_depth)
-        self.close()
+        try:
+            self._stream = open(self.__file_path, 'a')
+            super()._log(log_level, msg, manual_depth, is_lock)
+        finally:
+            self.close()
 
     def __limit_file_size(self):
         if self.is_limit_file_size:

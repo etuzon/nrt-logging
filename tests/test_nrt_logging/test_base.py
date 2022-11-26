@@ -84,7 +84,8 @@ class TestBase(unittest.TestCase):
     def _close_loggers_and_delete_logs(cls):
         logger_manager.close_all_loggers()
 
-        shutil.rmtree(cls.TEMP_PATH)
+        if os.path.exists(cls.TEMP_PATH):
+            shutil.rmtree(cls.TEMP_PATH)
 
         if not os.path.exists(cls.TEMP_PATH):
             os.mkdir(cls.TEMP_PATH)
