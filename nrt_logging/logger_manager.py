@@ -38,7 +38,7 @@ class NrtLoggerManager:
     def close_all_loggers(self):
         logger_dict = self.__loggers_dict.copy()
 
-        for name in logger_dict.keys():
+        for name in logger_dict:
             self.close_logger(name)
 
     def set_config(
