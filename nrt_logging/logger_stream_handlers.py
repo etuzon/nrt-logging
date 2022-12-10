@@ -393,10 +393,7 @@ class LoggerStreamHandlerBase(ABC):
                 f'Logger methods_depth value [{methods_depth}]'
                 f' cannot be less than 1')
 
-        if isinstance(self, FileStreamHandler):
-            stack_log_start_index = self._stack_log_start_index - 1
-        else:
-            stack_log_start_index = self._stack_log_start_index
+        stack_log_start_index = self._stack_log_start_index - 1
 
         stack_str_list, stack_list = \
             self.__get_stack_list(start_index=stack_log_start_index)
@@ -433,6 +430,7 @@ class LoggerStreamHandlerBase(ABC):
 
             try:
                 self._lock.acquire(is_lock)
+
                 if isinstance(msg, bytes):
                     msg = msg.decode('utf-8')
 
@@ -457,7 +455,6 @@ class LoggerStreamHandlerBase(ABC):
                         thread_id)
 
                 self._stream.write(f'{log_str}\n')
-
                 self.__clean_threads_dicts()
             finally:
                 if is_lock:
@@ -491,7 +488,8 @@ class LoggerStreamHandlerBase(ABC):
             attr = self_.__getattribute__(attr_name)
 
             if self.__is_variable(attr, attr_name):
-                self_str += f'{self.YAML_SPACES_SEPARATOR}{attr_name}: {attr}\n'
+                self_str += \
+                    f'{self.YAML_SPACES_SEPARATOR}{attr_name}: {attr}\n'
 
         if self_str:
             self_str = f'self:\n{self_str}'
@@ -976,6 +974,14 @@ class LoggerStreamHandlerBase(ABC):
             self.__clean_threads_counter += 1
 
     @classmethod
+    def is_utf_8(cls, msg) -> bool:
+        try:
+            msg.encode('utf-8')
+            return False
+        except UnicodeError:
+            return True
+
+    @classmethod
     def set_log_level(cls, level: LogLevelEnum):
         cls._log_level = level
 
@@ -1103,7 +1109,7 @@ class ConsoleStreamHandler(LoggerStreamHandlerBase):
 
     def __init__(self):
         super().__init__(
-            stack_log_start_index=4,
+            stack_log_start_index=5,
             stack_log_increase_start_index=3,
             stack_log_decrease_start_index=3)
         self._stream = sys.stdout
@@ -1146,7 +1152,7 @@ class ConsoleStreamHandler(LoggerStreamHandlerBase):
 
     def snapshot(
             self,
-            methods_depth: int = LoggerStreamHandlerBase.SNAPSHOT_METHODS_DEPTH,
+            methods_depth=LoggerStreamHandlerBase.SNAPSHOT_METHODS_DEPTH,
             manual_depth: ManualDepthEnum = ManualDepthEnum.NO_CHANGE):
         self._snapshot(methods_depth, manual_depth)
 
@@ -1154,6 +1160,20 @@ class ConsoleStreamHandler(LoggerStreamHandlerBase):
         """
         close function not relevant for ConsoleStreamHandler.
         """
+
+    def _log(
+            self,
+            log_level: LogLevelEnum,
+            msg: str,
+            manual_depth: ManualDepthEnum = ManualDepthEnum.NO_CHANGE,
+            is_lock: bool = True):
+
+        # Issue with Pycharm that init std.stdout with encoding cp1252
+        if self._stream.__getattribute__('encoding') != 'utf-8' \
+                and isinstance(msg, str):
+            msg = msg.encode('ascii', 'ignore').decode()
+
+        super()._log(log_level, msg, manual_depth, is_lock)
 
 
 class FileStreamHandler(LoggerStreamHandlerBase):
@@ -1216,7 +1236,7 @@ class FileStreamHandler(LoggerStreamHandlerBase):
 
     def snapshot(
             self,
-            methods_depth: int = LoggerStreamHandlerBase.SNAPSHOT_METHODS_DEPTH,
+            methods_depth=LoggerStreamHandlerBase.SNAPSHOT_METHODS_DEPTH,
             manual_depth: ManualDepthEnum = ManualDepthEnum.NO_CHANGE):
         self._snapshot(methods_depth, manual_depth)
 
