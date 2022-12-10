@@ -18,10 +18,9 @@ r_stdout: Optional[StringIO] = None
 def stdout_redirect(func):
     def inner(*args, **kwargs):
         temp_stdout = sys.stdout
-        sys.stdout = func.__globals__['r_stdout'] = StringIO()
-
+        stdout = StringIO()
+        sys.stdout = func.__globals__['r_stdout'] = stdout
         func(*args, **kwargs)
-
         sys.stdout = temp_stdout
         func.__globals__['r_stdout'] = None
 

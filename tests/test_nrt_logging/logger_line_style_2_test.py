@@ -22,6 +22,9 @@ F_MSG_1 = 'F METHOD 1'
 G_MSG_1 = 'G METHOD 1'
 H_MSG_1 = 'H METHOD 1'
 
+HEBREW_MSG_1 = "בדיקה"
+HEBREW_MSG_2 = "מאה ₪"
+
 
 class ComplexLogs1:
     __logger: NrtLogger
@@ -248,6 +251,28 @@ class NrtLoggerManager2Tests(TestBase):
 
         self.assertEqual(1, len(log_list))
         self.assertTrue(msg_str in log_list[0]['log'])
+
+    @classmethod
+    def __create_logger_and_sh(cls):
+        sh = ConsoleStreamHandler()
+        sh.style = LogStyleEnum.LINE
+        sh.log_level = LogLevelEnum.TRACE
+        logger = logger_manager.get_logger(NAME_1)
+        logger.add_stream_handler(sh)
+        return logger
+
+
+class NrtLoggerManager3Tests(TestBase):
+    def setUp(self):
+        logger_manager.close_all_loggers()
+
+    def tearDown(self):
+        logger_manager.close_all_loggers()
+
+    def test_hebrew_log_message_not_crash_stdout_cp1252(self):
+        logger = self.__create_logger_and_sh()
+        logger.info(HEBREW_MSG_1)
+        logger.info(HEBREW_MSG_2)
 
     @classmethod
     def __create_logger_and_sh(cls):
