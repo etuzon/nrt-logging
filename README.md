@@ -223,5 +223,5 @@ CONFIG_FILE_PATH = './config/config1.yaml'
 logger_manager.set_config(file_path=CONFIG_FILE_PATH)
 ```
 
-Wiki: https://github.com/etuzon/Python-NRT-Logging/wiki
+Wiki: https://github.com/etuzon/nrt-logging/wiki
 
