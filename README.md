@@ -5,10 +5,10 @@
 ![PyPI - License](https://img.shields.io/pypi/l/nrt-logging?color=blue&style=plastic)
 ![PyPI - Downloads](https://img.shields.io/pypi/dd/nrt-logging?style=plastic)
 ![PyPI - Downloads](https://img.shields.io/pypi/dm/nrt-logging?color=yellow&style=plastic)
-[![Coverage Status](https://coveralls.io/repos/github/etuzon/Python-NRT-Logging/badge.svg)](https://coveralls.io/github/etuzon/Python-NRT-Logging)
-![GitHub code size in bytes](https://img.shields.io/github/languages/code-size/etuzon/Python-NRT-Logging?style=plastic)
-![GitHub last commit](https://img.shields.io/github/last-commit/etuzon/Python-NRT-Logging?style=plastic)
-[![DeepSource](https://deepsource.io/gh/etuzon/Python-NRT-Logging.svg/?label=active+issues&token=3pUgM1IEwZG6Gpuc065dKDxM)](https://deepsource.io/gh/etuzon/Python-NRT-Logging/?ref=repository-badge)
+[![Coverage Status](https://coveralls.io/repos/github/etuzon/nrt-logging/badge.svg)](https://coveralls.io/github/etuzon/pytohn-nrt-logging)
+![GitHub code size in bytes](https://img.shields.io/github/languages/code-size/etuzon/python-nrt-logging?style=plastic)
+![GitHub last commit](https://img.shields.io/github/last-commit/etuzon/nrt-logging?style=plastic)
+[![DeepSource](https://deepsource.io/gh/etuzon/nrt-logging.svg/?label=active+issues&token=3pUgM1IEwZG6Gpuc065dKDxM)](https://deepsource.io/gh/etuzon/nrt-logging/?ref=repository-badge)
 
 Hierarchical logging help to group logs that are related to the same code flow.
 
